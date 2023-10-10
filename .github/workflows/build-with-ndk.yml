@@ -21,6 +21,8 @@ jobs:
   sync-for-upstream:
     needs: build-with-ndk
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - run: |
           GH_TOKEN=${{github.token}} gh repo sync turistu/strace -b for-upstream
