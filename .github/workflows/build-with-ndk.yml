@@ -20,9 +20,9 @@ jobs:
       ref: ${{github.ref_name}}-auto
   sync-for-upstream:
     needs: build-with-ndk
-    runs-on: ubuntu-latest
+    uses: turistu/odds-n-ends/.github/workflows/sync.yml@main
+    with:
+      branch: for-upstream
+      upstream: https://github.com/strace/strace
     permissions:
       contents: write
-    steps:
-      - run: |
-          GH_TOKEN=${{github.token}} gh repo sync turistu/strace -b for-upstream
