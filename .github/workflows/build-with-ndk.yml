@@ -1,0 +1,26 @@
+name: Build with the NDK
+on:
+  push:
+    branches:
+      - fixes
+  workflow_dispatch:
+  workflow_call:
+jobs:
+  autoreconf:
+    uses: turistu/odds-n-ends/.github/workflows/auto.yml@main
+    with:
+      cmd: ./bootstrap
+    permissions:
+      contents: write
+  build-with-ndk:
+    needs: autoreconf
+    uses: turistu/odds-n-ends/.github/workflows/build-with-ndk.yml@main
+    with:
+      build: .github/build-with-ndk
+      ref: ${{github.ref_name}}-auto
+  sync-for-upstream:
+    needs: build-with-ndk
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          GH_TOKEN=${{github.token}} gh repo sync turistu/strace -b for-upstream

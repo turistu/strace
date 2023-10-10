@@ -1,3 +1,23 @@
+##### see the [original README below](#original-readmemd)
+
+This fork currently includes just small fixes for cross compiling `strace` for Android (>= 5 Lollipop) with the NDK,
+something that fails with upstream and they [do not care to fix](https://github.com/strace/strace/pull/252) there.
+
+You can either get the prebuilt binaries from actions/{latest run}/artifacts, or build it yourself with:
+```
+./bootstrap
+ndk(){
+	arch=$1; api=$2; configure=$3; shift 3
+	ndk=${ANDROID_NDK:?please set the path to the NDK in the ANDROID_NDK envvar}
+	case $arch in armv7a) api=eabi${api}; esac
+	CC=$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/$arch-linux-android$api-clang \
+	  "$configure" --host="$arch-linux-android$api"
+}
+ndk aarch64 21 ./configure
+make -j
+adb push src/strace ...
+```
+## Original README.md
 strace - the linux syscall tracer
 =================================
 
