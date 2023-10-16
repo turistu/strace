@@ -11,7 +11,7 @@ ndk(){
 	ndk=${ANDROID_NDK:?please set the path to the NDK in the ANDROID_NDK envvar}
 	case $arch in armv7a) api=eabi${api}; esac
 	CC=$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/$arch-linux-android$api-clang \
-	  "$configure" --host="$arch-linux-android$api"
+	  "$configure" --host="$arch-linux-android$api" "$@"
 }
 ndk aarch64 21 ./configure
 make -j
