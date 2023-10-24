@@ -3,11 +3,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '30 13 */1 * *'
-env:
-  GITHUB_TOKEN: ${{secrets.SYNC_TOKEN}}
 jobs:
   sync:
     uses: turistu/odds-n-ends/.github/workflows/sync.yml@main
+    secrets: inherit
     with:
       branch: fixes
       upstream: https://github.com/strace/strace
