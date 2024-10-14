@@ -1,4 +1,4 @@
-name: Build with the NDK
+name: Build native and with the NDK
 on:
   push:
     branches:
@@ -18,8 +18,19 @@ jobs:
     with:
       build: .github/build-with-ndk
       ref: ${{github.ref_name}}-auto
+  build-native:
+    needs: autoreconf
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{github.ref_name}}-auto
+      - run: sudo apt-get install gcc-multilib
+      - run: ./configure
+      - run: make
+      - run: make check
   sync-for-upstream:
-    needs: build-with-ndk
+    needs: [build-with-ndk, build-native]
     uses: turistu/odds-n-ends/.github/workflows/sync.yml@main
     secrets: inherit
     with:
