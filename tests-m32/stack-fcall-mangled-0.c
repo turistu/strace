@@ -1,0 +1,1 @@
+../tests/stack-fcall-mangled-0.c

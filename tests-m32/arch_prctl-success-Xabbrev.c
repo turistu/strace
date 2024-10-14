@@ -1,0 +1,1 @@
+../tests/arch_prctl-success-Xabbrev.c

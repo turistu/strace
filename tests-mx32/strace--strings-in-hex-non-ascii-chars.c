@@ -1,0 +1,1 @@
+../tests/strace--strings-in-hex-non-ascii-chars.c

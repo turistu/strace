@@ -1,0 +1,1 @@
+../tests/setfsgid32.c

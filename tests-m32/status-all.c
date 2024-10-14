@@ -1,0 +1,1 @@
+../tests/status-all.c

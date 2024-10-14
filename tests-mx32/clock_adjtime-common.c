@@ -1,0 +1,1 @@
+../tests/clock_adjtime-common.c
