@@ -8,12 +8,10 @@
 
 #ifndef STRACE_SCHED_ATTR_H
 # define STRACE_SCHED_ATTR_H
-
-# include <stdint.h>
-
-# define SCHED_ATTR_MIN_SIZE	48
-
 # ifndef SCHED_ATTR_SIZE_VER1
+
+#  include <stdint.h>
+
 struct sched_attr {
 	uint32_t size;
 	uint32_t sched_policy;
@@ -27,7 +25,9 @@ struct sched_attr {
 	uint32_t sched_util_min;
 	uint32_t sched_util_max;
 };
+
 #  define SCHED_ATTR_SIZE_VER1  56
-# endif /* SCHED_ATTR_SIZE_VER1 */
+# endif
+# define SCHED_ATTR_MIN_SIZE	48
 
 #endif /* !STRACE_SCHED_ATTR_H */
