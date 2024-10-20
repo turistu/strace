@@ -5,7 +5,7 @@ something that fails with upstream and they [do not care to fix](https://github.
 
 You can either get the prebuilt binaries from actions/{latest run}/artifacts, or build it yourself with:
 ```
-./bootstrap
+./bootstrap	# not needed if you checked out an *-auto branch
 ndk(){
 	arch=$1; api=$2; configure=$3; shift 3
 	ndk=${ANDROID_NDK:?please set the path to the NDK in the ANDROID_NDK envvar}
