@@ -1,0 +1,1 @@
+../tests/fsconfig-P.c

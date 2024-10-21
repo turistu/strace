@@ -1,0 +1,1 @@
+../tests/io_uring_register-success-Xverbose.c

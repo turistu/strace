@@ -1,0 +1,1 @@
+../tests/is_linux_mips_n64.c

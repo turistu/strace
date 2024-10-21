@@ -1,0 +1,1 @@
+../tests/linkat--secontext_full_mismatch.c

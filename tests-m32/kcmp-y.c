@@ -1,0 +1,1 @@
+../tests/kcmp-y.c

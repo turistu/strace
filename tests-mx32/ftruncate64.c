@@ -1,0 +1,1 @@
+../tests/ftruncate64.c

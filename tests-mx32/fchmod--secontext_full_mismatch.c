@@ -1,0 +1,1 @@
+../tests/fchmod--secontext_full_mismatch.c

@@ -1,0 +1,1 @@
+../tests/sprintrc.c
