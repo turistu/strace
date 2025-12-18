@@ -1,6 +1,7 @@
 #unconditional
 #value_indexed
 #From include/uapi/linux/input-event-codes.h
+#Prefix BTN_ KEY_
 /* awk '{if (NF>1) {n=strtonum($2)}; printf("%d %s\n", n, $0)}' |sort -s -k1,1n |sed 's/^[0-9]* //' */
 KEY_RESERVED
 KEY_ESC
@@ -536,6 +537,9 @@ KEY_DO_NOT_DISTURB
 
 KEY_BRIGHTNESS_MIN
 KEY_BRIGHTNESS_MAX
+
+KEY_EPRIVACY_SCREEN_ON
+KEY_EPRIVACY_SCREEN_OFF
 
 KEY_KBDINPUTASSIST_PREV
 KEY_KBDINPUTASSIST_NEXT

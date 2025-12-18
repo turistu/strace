@@ -1,5 +1,6 @@
 #unconditional
 #From include/uapi/linux/fs.h
+#Pattern FS_.*_FL
 FS_SECRM_FL
 FS_UNRM_FL
 FS_COMPR_FL

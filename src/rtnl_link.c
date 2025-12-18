@@ -1223,7 +1223,7 @@ decode_ifla_port(struct tcb *const tcp,
 		 const void *const opaque_data)
 {
 	decode_nlattr(tcp, addr, len, rtnl_ifla_port_attrs,
-		      "IFLA_VF_PORT_???", ARRSZ_PAIR(ifla_port_nla_decoders),
+		      "IFLA_PORT_???", ARRSZ_PAIR(ifla_port_nla_decoders),
 		      opaque_data);
 
 	return true;
@@ -1665,6 +1665,8 @@ static const nla_decoder_t ifinfomsg_nla_decoders[] = {
 	[IFLA_GRO_IPV4_MAX_SIZE]	= decode_nla_u32,
 	[IFLA_MAX_PACING_OFFLOAD_HORIZON]	= decode_nla_u64,
 	[IFLA_NETNS_IMMUTABLE]	= decode_nla_u8,
+	[IFLA_HEADROOM]		= decode_nla_u16,
+	[IFLA_TAILROOM]		= decode_nla_u16,
 };
 
 DECL_NETLINK_ROUTE_DECODER(decode_ifinfomsg)

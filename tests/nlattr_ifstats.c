@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 Eugene Syromyatnikov <evgsyr@gmail.com>
- * Copyright (c) 2018-2022 The strace developers.
+ * Copyright (c) 2018-2025 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -505,7 +505,7 @@ check_xstats(const int fd, unsigned int cmd, const char *cmd_str)
 	for (size_t i = 0; i < ARRAY_SIZE(undec_3ad_types); i++) {
 		fmt_str(nla_type_str, sizeof(nla_type_str),
 			undec_3ad_types[i].val, undec_3ad_types[i].str,
-			"BOND_XSTATS_???");
+			"BOND_3AD_STAT_???");
 		TEST_NLATTR_(fd, nlh0, hdrlen + 3 * NLA_HDRLEN,
 			     init_ifstats_l3, print_ifstats_l3,
 			     undec_3ad_types[i].val, nla_type_str,

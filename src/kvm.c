@@ -454,7 +454,7 @@ kvm_ioctl(struct tcb *const tcp, const unsigned int code, const kernel_ulong_t a
 
 static void
 kvm_run_structure_decode_io(struct tcb *tcp,
-			      struct kvm_run *state)
+			      struct kvm_run *state, struct vcpu_info *info)
 {
 	tprints_field_name("io");
 	tprint_struct_begin();
@@ -467,6 +467,18 @@ kvm_run_structure_decode_io(struct tcb *tcp,
 	PRINT_FIELD_U(state->io, count);
 	tprint_struct_next();
 	PRINT_FIELD_0X(state->io, data_offset);
+
+	if (info) {
+		unsigned long data = info->mmap_addr + state->io.data_offset;
+		unsigned long data_len = state->io.size * state->io.count;
+		unsigned char buf;
+
+		tprint_struct_next();
+		tprints_field_name("data");
+		print_array(tcp, data, data_len, &buf, sizeof(buf), tfetch_mem,
+			    print_xint_array_member, NULL);
+	}
+
 	tprint_struct_end();
 }
 
@@ -489,14 +501,17 @@ kvm_run_structure_decode_mmio(struct tcb *tcp,
 static void
 kvm_run_structure_decode_main(struct tcb *tcp,
 			      struct kvm_run *state,
+			      struct vcpu_info *info,
 			      const char *auxstr)
 {
 	tprint_struct_begin();
 
 	PRINT_FIELD_U(*state, request_interrupt_window);
 	tprint_struct_next();
+# ifdef HAVE_STRUCT_KVM_RUN_IMMEDIATE_EXIT
 	PRINT_FIELD_U(*state, immediate_exit);
 	tprint_struct_next();
+# endif
 
 	PRINT_FIELD_U(*state, exit_reason);
 	if (auxstr)
@@ -506,8 +521,10 @@ kvm_run_structure_decode_main(struct tcb *tcp,
 	tprint_struct_next();
 	PRINT_FIELD_U(*state, if_flag);
 	tprint_struct_next();
+# ifdef	HAVE_STRUCT_KVM_RUN_FLAGS
 	PRINT_FIELD_X(*state, flags);
 	tprint_struct_next();
+# endif
 
 	PRINT_FIELD_0X(*state, cr8);
 	tprint_struct_next();
@@ -523,7 +540,7 @@ kvm_run_structure_decode_main(struct tcb *tcp,
 
 	switch (state->exit_reason) {
 	case KVM_EXIT_IO:
-		DECODE_UNION(kvm_run_structure_decode_io(tcp, state));
+		DECODE_UNION(kvm_run_structure_decode_io(tcp, state, info));
 		break;
 	case KVM_EXIT_MMIO:
 		DECODE_UNION(kvm_run_structure_decode_mmio(tcp, state));
@@ -548,7 +565,7 @@ kvm_run_structure_decode(struct tcb * tcp)
 			tprints_string(" VCPU< ");
 		const char *auxstr = xlookup(kvm_exit_reason,
 					     tcp->vcpu_entering->exit_reason);
-		kvm_run_structure_decode_main(tcp, tcp->vcpu_entering,
+		kvm_run_structure_decode_main(tcp, tcp->vcpu_entering, info,
 					      auxstr);
 	}
 
@@ -563,7 +580,7 @@ kvm_run_structure_decode(struct tcb * tcp)
 			tprintf_string(" VCPU:%d> ", info->cpuid);
 		else
 			tprints_string(" VCPU> ");
-		kvm_run_structure_decode_main(tcp, tcp->vcpu_leaving,
+		kvm_run_structure_decode_main(tcp, tcp->vcpu_leaving, info,
 					      tcp->auxstr);
 	}
 

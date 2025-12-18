@@ -2,7 +2,7 @@
  * Check how seccomp SECCOMP_SET_MODE_STRICT is decoded.
  *
  * Copyright (c) 2016-2018 Dmitry V. Levin <ldv@strace.io>
- * Copyright (c) 2016-2021 The strace developers.
+ * Copyright (c) 2016-2025 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -24,7 +24,7 @@ main(void)
 	long rc;
 
 	rc = syscall(__NR_seccomp, -1L, -1L, addr);
-	printf("seccomp(%#x /* SECCOMP_SET_MODE_??? */, %#x, %#llx)"
+	printf("seccomp(%#x /* SECCOMP_??? */, %#x, %#llx)"
 	       " = %s\n", -1, -1, (unsigned long long) addr, sprintrc(rc));
 	fflush(stdout);
 

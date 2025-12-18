@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 Eugene Syromyatnikov <evgsyr@gmail.com>
+ * Copyright (c) 2018-2025 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
@@ -221,7 +222,7 @@ decode_ifstats_link_xstats_bond_3ad(struct tcb *const tcp,
 				    const void *const opaque_data)
 {
 	decode_nlattr(tcp, addr, len, ifstats_xstats_bond_3ad_attrs,
-		      "BOND_XSTATS_???",
+		      "BOND_3AD_STAT_???",
 		      ARRSZ_PAIR(ifstats_xstats_bond_3ad_decoders),
 		      opaque_data);
 

@@ -1,7 +1,7 @@
 /*
  * Check bpf(BPF_OBJ_GET_INFO_BY_FD) decoding.
  *
- * Copyright (c) 2018-2024 The strace developers.
+ * Copyright (c) 2018-2025 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -98,6 +98,18 @@ print_map_create(void *attr_void, size_t size, long rc)
 			    map_extra)) {
 		printf(", map_extra=0");
 	}
+	if (size > offsetof(struct BPF_MAP_CREATE_struct,
+			    value_type_btf_obj_fd)) {
+		printf(", value_type_btf_obj_fd=0</dev/null>");
+	}
+	if (size > offsetof(struct BPF_MAP_CREATE_struct,
+			    map_token_fd)) {
+		printf(", map_token_fd=0</dev/null>");
+	}
+	if (size > offsetof(struct BPF_MAP_CREATE_struct,
+			    excl_prog_hash)) {
+		printf(", excl_prog_hash=NULL, excl_prog_hash_size=0");
+	}
 	printf("}, %zu) = ", size);
 	if (rc >= 0)
 		printf("%ld<anon_inode:bpf-map>\n", rc);
@@ -193,6 +205,8 @@ static char log_buf[4096];
 static void
 print_prog_load(void *attr_void, size_t size, long rc)
 {
+	struct BPF_PROG_LOAD_struct *attr = attr_void;
+
 	printf("bpf(BPF_PROG_LOAD, {prog_type=BPF_PROG_TYPE_SOCKET_FILTER"
 	       ", insn_cnt=%zu, insns=", ARRAY_SIZE(socket_prog));
 # if VERBOSE
@@ -233,8 +247,20 @@ print_prog_load(void *attr_void, size_t size, long rc)
 		printf(", attach_btf_id=0");
 	if (size > offsetof(struct BPF_PROG_LOAD_struct, attach_prog_fd))
 		printf(", attach_prog_fd=0</dev/null>");
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, core_relos))
+		printf(", core_relo_cnt=0");
 	if (size > offsetof(struct BPF_PROG_LOAD_struct, fd_array))
 		printf(", fd_array=NULL");
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, core_relos))
+		printf(", core_relos=NULL, core_relo_rec_size=0");
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, log_true_size))
+		printf(", log_true_size=%u", attr->log_true_size);
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, prog_token_fd))
+		printf(", prog_token_fd=0</dev/null>");
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, fd_array_cnt))
+		printf(", fd_array_cnt=0");
+	if (size > offsetof(struct BPF_PROG_LOAD_struct, signature))
+		printf(", signature=NULL, signature_size=0, keyring_id=0");
 	printf("}, %zu) = ", size);
 	if (rc >= 0)
 		printf("%ld<anon_inode:bpf-prog>\n", rc);
@@ -437,6 +463,20 @@ main(int ac, char **av)
 		    offsetof(struct bpf_map_info_struct, btf_value_type_id)) {
 			printf(", ");
 			PRINT_FIELD_U(map_info[i], btf_value_type_id);
+		}
+		if (bpf_map_get_info_attr[i].info_len >
+		    offsetof(struct bpf_map_info_struct, map_extra)) {
+			printf(", ");
+			PRINT_FIELD_U(map_info[i], btf_vmlinux_id);
+			printf(", ");
+			PRINT_FIELD_X(map_info[i], map_extra);
+		}
+		if (bpf_map_get_info_attr[i].info_len >
+		    offsetof(struct bpf_map_info_struct, hash)) {
+			printf(", ");
+			PRINT_FIELD_X(map_info[i], hash);
+			printf(", ");
+			PRINT_FIELD_U(map_info[i], hash_size);
 		}
 		printf("}");
 #else /* !VERBOSE */
@@ -741,6 +781,12 @@ main(int ac, char **av)
 		if (bpf_prog_get_info_attr.info_len >
 		    offsetof(struct bpf_prog_info_struct, verified_insns))
 			printf(", verified_insns=%u", prog_info->verified_insns);
+		if (bpf_prog_get_info_attr.info_len >
+		    offsetof(struct bpf_prog_info_struct, attach_btf_obj_id)) {
+			printf(", attach_btf_obj_id=%u",
+			       prog_info->attach_btf_obj_id);
+			printf(", attach_btf_id=%u", prog_info->attach_btf_id);
+		}
 
 		printf("}");
 # else /* !VERBOSE */

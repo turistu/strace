@@ -4,7 +4,7 @@
  *
  * kvmtest.c author: Josh Triplett <josh@joshtriplett.org>
  * Copyright (c) 2015 Intel Corporation
- * Copyright (c) 2017-2023 The strace developers.
+ * Copyright (c) 2017-2025 The strace developers.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -226,10 +226,11 @@ run_kvm(const int vcpu_fd, struct kvm_run *const run, const size_t mmap_size,
 	const char *p = "\n";
 
 	/* Repeatedly run code and handle VM exits. */
+	struct kvm_run *run_before = tail_alloc(mmap_size);
 	for (;;) {
-		const struct kvm_run run_before = *run;
+		memcpy(run_before, run, mmap_size);
 		KVM_IOCTL(vcpu_fd, KVM_RUN, NULL);
-		print_KVM_RUN(vcpu_fd, vcpu_dev, &run_before, run);
+		print_KVM_RUN(vcpu_fd, vcpu_dev, run_before, run);
 
 		switch (run->exit_reason) {
 		case KVM_EXIT_HLT:
