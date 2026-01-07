@@ -28,6 +28,10 @@
 #include "xlat/uring_restriction_opcodes.h"
 #include "xlat/uring_napi_ops.h"
 #include "xlat/uring_napi_tracking_strategies.h"
+#include "xlat/uring_msg_ring_flags.h"
+#include "xlat/uring_zcrx_reg_flags.h"
+#include "xlat/uring_zcrx_area_flags.h"
+#include "xlat/uring_mem_region_reg_flags.h"
 
 static void
 print_io_sqring_offsets(const struct io_sqring_offsets *const p)
@@ -865,6 +869,236 @@ print_ioring_register_clone_buffers(struct tcb *tcp, const kernel_ulong_t addr,
 }
 
 static void
+print_io_uring_sqe(struct tcb *tcp, const kernel_ulong_t addr)
+{
+	struct io_uring_sqe sqe;
+
+	if (umove_or_printaddr(tcp, addr, &sqe))
+		return;
+
+	CHECK_TYPE_SIZE(struct io_uring_sqe, 64);
+
+	tprint_struct_begin();
+
+	PRINT_FIELD_XVAL_U(sqe, opcode, uring_ops, "IORING_OP_???");
+	tprint_struct_next();
+	PRINT_FIELD_FLAGS(sqe, flags, uring_sqe_flags, "IOSQE_???");
+	tprint_struct_next();
+	PRINT_FIELD_U(sqe, ioprio);
+	tprint_struct_next();
+	PRINT_FIELD_FD(sqe, fd, tcp);
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, off);
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, addr);
+	tprint_struct_next();
+	PRINT_FIELD_U(sqe, len);
+	tprint_struct_next();
+	if (sqe.opcode == IORING_OP_MSG_RING) {
+		PRINT_FIELD_FLAGS(sqe, msg_ring_flags, uring_msg_ring_flags,
+				 "IORING_MSG_RING_???");
+	} else {
+		PRINT_FIELD_X(sqe, rw_flags);
+	}
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, user_data);
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, buf_index);
+	tprint_struct_next();
+	PRINT_FIELD_U(sqe, personality);
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, file_index);
+	tprint_struct_next();
+	PRINT_FIELD_X(sqe, optval);
+
+	tprint_struct_end();
+}
+
+static int
+print_ioring_register_send_msg_ring(struct tcb *tcp, const kernel_ulong_t addr,
+				    const unsigned int nargs)
+{
+	if (nargs == 1)
+		print_io_uring_sqe(tcp, addr);
+	else
+		printaddr(addr);
+
+	return RVAL_DECODED;
+}
+
+static void
+print_io_uring_zcrx_offsets(struct tcb *tcp,
+			    const struct io_uring_zcrx_offsets *const offsets)
+{
+	tprint_struct_begin();
+
+	PRINT_FIELD_U(*offsets, head);
+	tprint_struct_next();
+	PRINT_FIELD_U(*offsets, tail);
+	tprint_struct_next();
+	PRINT_FIELD_U(*offsets, rqes);
+
+	if (offsets->__resv2) {
+		tprint_struct_next();
+		PRINT_FIELD_X(*offsets, __resv2);
+	}
+
+	if (!IS_ARRAY_ZERO(offsets->__resv)) {
+		tprint_struct_next();
+		PRINT_FIELD_ARRAY(*offsets, __resv, tcp, print_xint_array_member);
+	}
+
+	tprint_struct_end();
+}
+
+static void
+print_io_uring_zcrx_ifq_reg(struct tcb *tcp, const kernel_ulong_t addr)
+{
+	struct io_uring_zcrx_ifq_reg arg;
+
+	CHECK_TYPE_SIZE(struct io_uring_zcrx_ifq_reg, 96);
+
+	if (umove_or_printaddr(tcp, addr, &arg))
+		return;
+
+	tprint_struct_begin();
+
+	PRINT_FIELD_U(arg, if_idx);
+	tprint_struct_next();
+	PRINT_FIELD_U(arg, if_rxq);
+	tprint_struct_next();
+	PRINT_FIELD_U(arg, rq_entries);
+	tprint_struct_next();
+	PRINT_FIELD_FLAGS(arg, flags, uring_zcrx_reg_flags, "ZCRX_REG_???");
+	tprint_struct_next();
+	PRINT_FIELD_ADDR64(arg, area_ptr);
+	tprint_struct_next();
+	PRINT_FIELD_ADDR64(arg, region_ptr);
+	tprint_struct_next();
+	tprints_field_name("offsets");
+	print_io_uring_zcrx_offsets(tcp, &arg.offsets);
+	tprint_struct_next();
+	PRINT_FIELD_U(arg, zcrx_id);
+
+	if (arg.__resv2) {
+		tprint_struct_next();
+		PRINT_FIELD_X(arg, __resv2);
+	}
+
+	if (!IS_ARRAY_ZERO(arg.__resv)) {
+		tprint_struct_next();
+		PRINT_FIELD_ARRAY(arg, __resv, tcp, print_xint_array_member);
+	}
+
+	tprint_struct_end();
+}
+
+static int
+print_ioring_register_zcrx_ifq(struct tcb *tcp, const kernel_ulong_t addr,
+				const unsigned int nargs)
+{
+	if (nargs == 1)
+		print_io_uring_zcrx_ifq_reg(tcp, addr);
+	else
+		printaddr(addr);
+
+	return RVAL_DECODED;
+}
+
+static void
+print_io_uring_params_input(struct tcb *tcp, const kernel_ulong_t addr)
+{
+	struct io_uring_params params;
+
+	if (umove_or_printaddr(tcp, addr, &params))
+		return;
+
+	CHECK_TYPE_SIZE(struct io_uring_params, 120);
+
+	tprint_struct_begin();
+	PRINT_FIELD_U(params, sq_entries);
+	tprint_struct_next();
+	PRINT_FIELD_U(params, cq_entries);
+	tprint_struct_next();
+	PRINT_FIELD_FLAGS(params, flags, uring_setup_flags,
+			  "IORING_SETUP_???");
+
+	/* Print user_addr fields if non-zero (only meaningful if
+	 * IORING_SETUP_NO_MMAP was set during original io_uring_setup(),
+	 * but we can't know that from the register call alone) */
+	if (params.sq_off.user_addr) {
+		tprint_struct_next();
+		tprints_field_name("sq_off");
+		tprint_struct_begin();
+		PRINT_FIELD_X(params.sq_off, user_addr);
+		tprint_struct_end();
+	}
+	if (params.cq_off.user_addr) {
+		tprint_struct_next();
+		tprints_field_name("cq_off");
+		tprint_struct_begin();
+		PRINT_FIELD_X(params.cq_off, user_addr);
+		tprint_struct_end();
+	}
+
+	if (!IS_ARRAY_ZERO(params.resv)) {
+		tprint_struct_next();
+		PRINT_FIELD_ARRAY(params, resv, tcp, print_xint_array_member);
+	}
+
+	tprint_struct_end();
+}
+
+static int
+print_ioring_register_resize_rings(struct tcb *tcp, const kernel_ulong_t addr,
+				    const unsigned int nargs)
+{
+	if (nargs == 1)
+		print_io_uring_params_input(tcp, addr);
+	else
+		printaddr(addr);
+
+	return RVAL_DECODED;
+}
+
+static void
+print_io_uring_mem_region_reg(struct tcb *tcp, const kernel_ulong_t addr)
+{
+	struct io_uring_mem_region_reg arg;
+
+	CHECK_TYPE_SIZE(struct io_uring_mem_region_reg, 32);
+
+	if (umove_or_printaddr(tcp, addr, &arg))
+		return;
+
+	tprint_struct_begin();
+
+	PRINT_FIELD_ADDR64(arg, region_uptr);
+	tprint_struct_next();
+	PRINT_FIELD_FLAGS(arg, flags, uring_mem_region_reg_flags,
+			  "IORING_MEM_REGION_REG_???");
+
+	if (!IS_ARRAY_ZERO(arg.__resv)) {
+		tprint_struct_next();
+		PRINT_FIELD_ARRAY(arg, __resv, tcp, print_xint_array_member);
+	}
+
+	tprint_struct_end();
+}
+
+static int
+print_ioring_register_mem_region(struct tcb *tcp, const kernel_ulong_t addr,
+				 const unsigned int nargs)
+{
+	if (nargs == 1)
+		print_io_uring_mem_region_reg(tcp, addr);
+	else
+		printaddr(addr);
+
+	return RVAL_DECODED;
+}
+
+static void
 print_io_uring_register_opcode(struct tcb *tcp, const unsigned int opcode,
 			       const unsigned int flags)
 {
@@ -974,6 +1208,18 @@ SYS_FUNC(io_uring_register)
 		break;
 	case IORING_REGISTER_CLONE_BUFFERS:
 		rc = print_ioring_register_clone_buffers(tcp, arg, nargs);
+		break;
+	case IORING_REGISTER_SEND_MSG_RING:
+		rc = print_ioring_register_send_msg_ring(tcp, arg, nargs);
+		break;
+	case IORING_REGISTER_ZCRX_IFQ:
+		rc = print_ioring_register_zcrx_ifq(tcp, arg, nargs);
+		break;
+	case IORING_REGISTER_RESIZE_RINGS:
+		rc = print_ioring_register_resize_rings(tcp, arg, nargs);
+		break;
+	case IORING_REGISTER_MEM_REGION:
+		rc = print_ioring_register_mem_region(tcp, arg, nargs);
 		break;
 	case IORING_UNREGISTER_BUFFERS:
 	case IORING_UNREGISTER_FILES:

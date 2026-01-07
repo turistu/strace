@@ -1624,6 +1624,363 @@ main(void)
 		printf("}, 1) = %s\n", errstr);
 	}
 
+	/* IORING_REGISTER_SEND_MSG_RING */
+	static const struct strval32 send_msg_ring_ops =
+		{ ARG_STR(IORING_REGISTER_SEND_MSG_RING) };
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_sqe, sqe);
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, 0, 0xdeadbeef);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, %u) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       0xdeadbeef, errstr);
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, sqe + 1, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       sqe + 1, errstr);
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, sqe, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       sqe, errstr);
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, sqe, 2);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 2) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       sqe, errstr);
+
+	memset(sqe, 0, sizeof(*sqe));
+	sqe->opcode = IORING_OP_MSG_RING;
+	sqe->flags = IOSQE_FIXED_FILE;
+	sqe->fd = fd_null;
+	sqe->addr = IORING_MSG_DATA;
+	sqe->len = 0xdeadbeef;
+	sqe->msg_ring_flags = IORING_MSG_RING_CQE_SKIP;
+	sqe->user_data = 0xfacefeedcafebabeULL;
+	sqe->file_index = 0x1234;
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, sqe, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {opcode=" XLAT_FMT_U ", flags=" XLAT_FMT
+	       ", ioprio=0, fd=%u<%s>, off=0, addr=%#llx"
+	       ", len=%u, msg_ring_flags=" XLAT_FMT
+	       ", user_data=%#llx, buf_index=0, personality=0"
+	       ", file_index=%#x, optval=0}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       XLAT_ARGS(IORING_OP_MSG_RING),
+	       XLAT_ARGS(IOSQE_FIXED_FILE),
+	       fd_null, path_null,
+	       (unsigned long long) sqe->addr,
+	       sqe->len,
+	       XLAT_ARGS(IORING_MSG_RING_CQE_SKIP),
+	       (unsigned long long) sqe->user_data,
+	       sqe->file_index,
+	       errstr);
+
+	memset(sqe, 0, sizeof(*sqe));
+	sqe->opcode = IORING_OP_NOP;
+	sqe->flags = IOSQE_IO_DRAIN;
+	sqe->fd = fd_full;
+	sqe->off = 0x123456789abcdef0ULL;
+	sqe->addr = 0xfedcba9876543210ULL;
+	sqe->len = 0xcafebabe;
+	sqe->rw_flags = 0xdeadface;
+	sqe->user_data = 0xbadc0dedbeefcafeULL;
+	sqe->buf_index = 0x5678;
+	sqe->personality = 0x9abc;
+	sqe->file_index = 0xdef0;
+	sqe->optval = 0x1111222233334444ULL;
+
+	sys_io_uring_register(fd_null, send_msg_ring_ops.val, sqe, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {opcode=" XLAT_FMT_U ", flags=" XLAT_FMT
+	       ", ioprio=0, fd=%u<%s>, off=%#llx, addr=%#llx"
+	       ", len=%u, rw_flags=%#x, user_data=%#llx"
+	       ", buf_index=%#x, personality=%u"
+	       ", file_index=%#x, optval=%#llx}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(send_msg_ring_ops.val, send_msg_ring_ops.str),
+	       XLAT_ARGS(IORING_OP_NOP),
+	       XLAT_ARGS(IOSQE_IO_DRAIN),
+	       fd_full, path_full,
+	       (unsigned long long) sqe->off,
+	       (unsigned long long) sqe->addr,
+	       sqe->len,
+	       sqe->rw_flags,
+	       (unsigned long long) sqe->user_data,
+	       sqe->buf_index,
+	       sqe->personality,
+	       sqe->file_index,
+	       (unsigned long long) sqe->optval,
+	       errstr);
+
+	/* IORING_REGISTER_ZCRX_IFQ */
+	static const struct strval32 zcrx_ifq_ops =
+		{ ARG_STR(IORING_REGISTER_ZCRX_IFQ) };
+
+	sys_io_uring_register(fd_null, zcrx_ifq_ops.val, 0, 2);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, 2) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ifq_ops.val, zcrx_ifq_ops.str),
+	       errstr);
+
+	sys_io_uring_register(fd_null, zcrx_ifq_ops.val, 0, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ifq_ops.val, zcrx_ifq_ops.str),
+	       errstr);
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_zcrx_ifq_reg, zcrx_ifq);
+
+	sys_io_uring_register(fd_null, zcrx_ifq_ops.val, zcrx_ifq + 1, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ifq_ops.val, zcrx_ifq_ops.str),
+	       zcrx_ifq + 1, errstr);
+
+	memset(zcrx_ifq, 0, sizeof(*zcrx_ifq));
+	zcrx_ifq->if_idx = 0x1234;
+	zcrx_ifq->if_rxq = 0x5678;
+	zcrx_ifq->rq_entries = 0x9abc;
+	zcrx_ifq->flags = ZCRX_REG_IMPORT;
+	zcrx_ifq->area_ptr = 0xdeadbeefcafebabeULL;
+	zcrx_ifq->region_ptr = 0xfacefeedbadc0dedULL;
+	zcrx_ifq->offsets.head = 0x1111;
+	zcrx_ifq->offsets.tail = 0x2222;
+	zcrx_ifq->offsets.rqes = 0x3333;
+	zcrx_ifq->zcrx_id = 0x4444;
+
+	sys_io_uring_register(fd_null, zcrx_ifq_ops.val, zcrx_ifq, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {if_idx=%u, if_rxq=%u, rq_entries=%u"
+	       ", flags=" XLAT_FMT
+	       ", area_ptr=%#llx, region_ptr=%#llx"
+	       ", offsets={head=%u, tail=%u, rqes=%u}"
+	       ", zcrx_id=%u}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ifq_ops.val, zcrx_ifq_ops.str),
+	       zcrx_ifq->if_idx, zcrx_ifq->if_rxq, zcrx_ifq->rq_entries,
+	       XLAT_ARGS(ZCRX_REG_IMPORT),
+	       (unsigned long long) zcrx_ifq->area_ptr,
+	       (unsigned long long) zcrx_ifq->region_ptr,
+	       zcrx_ifq->offsets.head, zcrx_ifq->offsets.tail,
+	       zcrx_ifq->offsets.rqes,
+	       zcrx_ifq->zcrx_id,
+	       errstr);
+
+	memset(zcrx_ifq, 0, sizeof(*zcrx_ifq));
+	zcrx_ifq->if_idx = 0xaaaa;
+	zcrx_ifq->offsets.__resv2 = 0xbbbb;
+	zcrx_ifq->__resv2 = 0xcccc;
+	zcrx_ifq->offsets.__resv[0] = 0xddddddddddddddddULL;
+	zcrx_ifq->offsets.__resv[1] = 0xeeeeeeeeeeeeeeeeULL;
+	zcrx_ifq->__resv[0] = 0x1111111111111111ULL;
+	zcrx_ifq->__resv[1] = 0x2222222222222222ULL;
+	zcrx_ifq->__resv[2] = 0x3333333333333333ULL;
+
+	sys_io_uring_register(fd_null, zcrx_ifq_ops.val, zcrx_ifq, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {if_idx=%u, if_rxq=0, rq_entries=0, flags=0"
+	       ", area_ptr=NULL, region_ptr=NULL"
+	       ", offsets={head=0, tail=0, rqes=0, __resv2=%#x"
+	       ", __resv=[%#llx, %#llx]}"
+	       ", zcrx_id=0, __resv2=%#x"
+	       ", __resv=[%#llx, %#llx, %#llx]}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ifq_ops.val, zcrx_ifq_ops.str),
+	       zcrx_ifq->if_idx,
+	       zcrx_ifq->offsets.__resv2,
+	       (unsigned long long) zcrx_ifq->offsets.__resv[0],
+	       (unsigned long long) zcrx_ifq->offsets.__resv[1],
+	       zcrx_ifq->__resv2,
+	       (unsigned long long) zcrx_ifq->__resv[0],
+	       (unsigned long long) zcrx_ifq->__resv[1],
+	       (unsigned long long) zcrx_ifq->__resv[2],
+	       errstr);
+
+	/* IORING_REGISTER_RESIZE_RINGS */
+	static const struct strval32 resize_rings_ops =
+		{ ARG_STR(IORING_REGISTER_RESIZE_RINGS) };
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_params, params);
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, 0, 0xdeadbeef);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, %u) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       0xdeadbeef, errstr);
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params + 1, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params + 1, errstr);
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params, errstr);
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 2);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 2) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params, errstr);
+
+	memset(params, 0, sizeof(*params));
+	params->sq_entries = 256;
+	params->cq_entries = 512;
+	params->flags = IORING_SETUP_CQSIZE;
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {sq_entries=%u, cq_entries=%u, flags=" XLAT_FMT "}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params->sq_entries, params->cq_entries,
+	       XLAT_ARGS(IORING_SETUP_CQSIZE),
+	       errstr);
+
+	memset(params, 0, sizeof(*params));
+	params->sq_entries = 128;
+	params->cq_entries = 256;
+	params->flags = IORING_SETUP_CLAMP;
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {sq_entries=%u, cq_entries=%u, flags=" XLAT_FMT "}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params->sq_entries, params->cq_entries,
+	       XLAT_ARGS(IORING_SETUP_CLAMP),
+	       errstr);
+
+	memset(params, 0, sizeof(*params));
+	params->sq_entries = 128;
+	params->cq_entries = 256;
+	params->flags = IORING_SETUP_CQSIZE;
+	params->sq_off.user_addr = 0xdeadbeefcafebabeULL;
+	params->cq_off.user_addr = 0xfedcba9876543210ULL;
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {sq_entries=%u, cq_entries=%u, flags=" XLAT_FMT
+	       ", sq_off={user_addr=%#llx}, cq_off={user_addr=%#llx}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params->sq_entries, params->cq_entries,
+	       XLAT_ARGS(IORING_SETUP_CQSIZE),
+	       (unsigned long long) params->sq_off.user_addr,
+	       (unsigned long long) params->cq_off.user_addr,
+	       errstr);
+
+	memset(params, 0, sizeof(*params));
+	params->sq_entries = 64;
+	params->cq_entries = 128;
+	params->resv[0] = 0xdeadbeef;
+	params->resv[1] = 0xcafebabe;
+	params->resv[2] = 0x12345678;
+
+	sys_io_uring_register(fd_null, resize_rings_ops.val, params, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {sq_entries=%u, cq_entries=%u, flags=0"
+	       ", resv=[%#x, %#x, %#x]}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(resize_rings_ops.val, resize_rings_ops.str),
+	       params->sq_entries, params->cq_entries,
+	       params->resv[0], params->resv[1], params->resv[2],
+	       errstr);
+
+	/* IORING_REGISTER_MEM_REGION */
+	static const struct strval32 mem_region_ops =
+		{ ARG_STR(IORING_REGISTER_MEM_REGION) };
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_mem_region_reg, mem_region);
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, 0, 0xdeadbeef);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, %u) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       0xdeadbeef, errstr);
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region + 1, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       mem_region + 1, errstr);
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       mem_region, errstr);
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 2);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 2) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       mem_region, errstr);
+
+	memset(mem_region, 0, sizeof(*mem_region));
+	mem_region->region_uptr = 0;
+	mem_region->flags = 0;
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {region_uptr=NULL, flags=0}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       errstr);
+
+	memset(mem_region, 0, sizeof(*mem_region));
+	mem_region->region_uptr = 0xdeadbeefcafebabeULL;
+	mem_region->flags = 0;
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {region_uptr=%#llx, flags=0}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       (unsigned long long) mem_region->region_uptr,
+	       errstr);
+
+	memset(mem_region, 0, sizeof(*mem_region));
+	mem_region->region_uptr = 0xfedcba9876543210ULL;
+	mem_region->flags = IORING_MEM_REGION_REG_WAIT_ARG;
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {region_uptr=%#llx, flags=" XLAT_FMT "}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       (unsigned long long) mem_region->region_uptr,
+	       XLAT_ARGS(IORING_MEM_REGION_REG_WAIT_ARG),
+	       errstr);
+
+	memset(mem_region, 0, sizeof(*mem_region));
+	mem_region->region_uptr = 0x1234567890abcdefULL;
+	mem_region->flags = 0;
+	mem_region->__resv[0] = 0xdeadbeef;
+	mem_region->__resv[1] = 0xcafebabe;
+
+	sys_io_uring_register(fd_null, mem_region_ops.val, mem_region, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {region_uptr=%#llx, flags=0"
+	       ", __resv=[%#llx, %#llx]}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(mem_region_ops.val, mem_region_ops.str),
+	       (unsigned long long) mem_region->region_uptr,
+	       (unsigned long long) mem_region->__resv[0],
+	       (unsigned long long) mem_region->__resv[1],
+	       errstr);
+
 	puts("+++ exited with 0 +++");
 	return 0;
 }

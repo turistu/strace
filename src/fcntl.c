@@ -31,6 +31,7 @@
 #include "xlat/fdflags.h"
 #include "xlat/lockfcmds.h"
 #include "xlat/notifyflags.h"
+#include "xlat/rwh_write_life_hints.h"
 
 static void
 print_struct_flock64(struct tcb *const tcp, const struct flock64 *fl, const int getlk)
@@ -98,6 +99,36 @@ print_f_owner_ex(struct tcb *const tcp, const kernel_ulong_t addr)
 	tprint_struct_end();
 }
 
+static void
+print_rw_hint(struct tcb *const tcp, const kernel_ulong_t addr)
+{
+	uint64_t hint;
+
+	if (umove_or_printaddr(tcp, addr, &hint))
+		return;
+
+	tprint_indirect_begin();
+	printxval64(rwh_write_life_hints, hint, "RWH_WRITE_LIFE_???");
+	tprint_indirect_end();
+}
+
+static void
+print_delegation(struct tcb *const tcp, const kernel_ulong_t addr)
+{
+	struct delegation deleg;
+
+	if (umove_or_printaddr(tcp, addr, &deleg))
+		return;
+
+	tprint_struct_begin();
+	PRINT_FIELD_X(deleg, d_flags);
+	tprint_struct_next();
+	PRINT_FIELD_XVAL(deleg, d_type, lockfcmds, "F_???");
+	tprint_struct_next();
+	PRINT_FIELD_X(deleg, __pad);
+	tprint_struct_end();
+}
+
 static int
 print_fcntl(struct tcb *tcp)
 {
@@ -159,6 +190,15 @@ print_fcntl(struct tcb *tcp)
 		tprints_arg_next_name("arg");
 		printsignal(tcp->u_arg[2]);
 		break;
+	case F_SET_RW_HINT:
+	case F_SET_FILE_RW_HINT:
+		tprints_arg_next_name("arg");
+		print_rw_hint(tcp, tcp->u_arg[2]);
+		break;
+	case F_SETDELEG:
+		tprints_arg_next_name("arg");
+		print_delegation(tcp, tcp->u_arg[2]);
+		break;
 	case F_GETOWN:
 		return RVAL_DECODED |
 		       ((int) tcp->u_rval < 0 ? RVAL_PGID : RVAL_TGID);
@@ -192,6 +232,19 @@ print_fcntl(struct tcb *tcp)
 			return 0;
 		tprints_arg_next_name("arg");
 		print_f_owner_ex(tcp, tcp->u_arg[2]);
+		break;
+	case F_GET_RW_HINT:
+	case F_GET_FILE_RW_HINT:
+		if (entering(tcp))
+			return 0;
+		tprints_arg_next_name("arg");
+		print_rw_hint(tcp, tcp->u_arg[2]);
+		break;
+	case F_GETDELEG:
+		if (entering(tcp))
+			return 0;
+		tprints_arg_next_name("arg");
+		print_delegation(tcp, tcp->u_arg[2]);
 		break;
 	case F_GETLEASE:
 		if (entering(tcp) || syserror(tcp))
