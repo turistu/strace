@@ -20,6 +20,7 @@
 #include "kernel_time_types.h"
 #define UAPI_LINUX_IO_URING_H_SKIP_LINUX_TIME_TYPES_H
 #include <linux/io_uring.h>
+#include <linux/io_uring/query.h>
 
 /* From tests/bpf.c */
 #if defined MPERS_IS_m32 || SIZEOF_KERNEL_LONG_T > 4
@@ -140,113 +141,25 @@ print_rsrc_tags_end:
 	printf("]");
 }
 
-int
-main(void)
+static void
+test_IORING_REGISTER_BUFFERS(int fd_null, const struct iovec *arg_iov,
+			     const struct iovec *iov, size_t iov_len)
 {
-	const struct iovec iov[] = {
-		{
-			.iov_base = (void *) (unsigned long) 0xfacefeedcafef00d,
-			.iov_len = (unsigned long) 0xdeadfacebeefcafe
-		},
-		{
-			.iov_base = (void *) path_null,
-			.iov_len = sizeof(path_null)
-		}
-	};
-	const struct iovec *const arg_iov = tail_memdup(iov, sizeof(iov));
-
-	skip_if_unavailable("/proc/self/fd/");
-
-	close(0); /* Trying to get fd 0 for /dev/null */
-	int fd_null = open(path_null, O_RDONLY);
-	if (fd_null < 0)
-		perror_msg_and_fail("open: %s", path_null);
-
-	int fd_full = open(path_full, O_RDONLY);
-	if (fd_full < 0)
-		perror_msg_and_fail("open: %s", path_full);
-
-	int fds[] = { fd_full, fd_null, -1, -2, -3 };
-	const char *paths[ARRAY_SIZE(fds)] = { path_full, path_null };
-	const int *const arg_fds = tail_memdup(fds, sizeof(fds));
-
-
-	/* Invalid op */
-	static const unsigned int invalid_ops[] = { 0x7fffffffU, 37 };
-	static const struct strval32 op_flags[] = {
-		{ ARG_STR(IORING_REGISTER_USE_REGISTERED_RING) },
-	};
-
-	for (size_t i = 0; i < ARRAY_SIZE(invalid_ops); i++) {
-		sys_io_uring_register(fd_null, invalid_ops[i], path_null,
-				      0xdeadbeef);
-		printf("io_uring_register(%u<%s>, %#x"
-		       NRAW(" /* IORING_REGISTER_??? */") ", %p, %u) = %s\n",
-		       fd_null, path_null, invalid_ops[i], path_null,
-		       0xdeadbeef, errstr);
-
-		for (size_t j = 0; j < ARRAY_SIZE(op_flags); ++j) {
-			sys_io_uring_register(fd_null, invalid_ops[i] |
-						       op_flags[j].val,
-					      path_null, 0xdeadbeef);
-			printf("io_uring_register(%u, %#x"
-			       NRAW(" /* IORING_REGISTER_??? */") "|" XLAT_FMT
-			       ", %p, %u) = %s\n",
-			       fd_null, invalid_ops[i],
-			       XLAT_SEL(op_flags[j].val, op_flags[j].str),
-			       path_null, 0xdeadbeef, errstr);
-		}
-	}
-
-
-	/* Operations without an argument */
-	static const struct {
-		unsigned int op;
-		const char *str;
-	} no_arg_ops[] = {
-		{ 1, "IORING_UNREGISTER_BUFFERS" },
-		{ 3, "IORING_UNREGISTER_FILES" },
-		{ 5, "IORING_UNREGISTER_EVENTFD" },
-		{ 9, "IORING_REGISTER_PERSONALITY" },
-		{ 10, "IORING_UNREGISTER_PERSONALITY" },
-		{ 12, "IORING_REGISTER_ENABLE_RINGS" },
-		{ 18, "IORING_UNREGISTER_IOWQ_AFF" },
-	};
-
-	for (size_t i = 0; i < ARRAY_SIZE(no_arg_ops); i++) {
-		sys_io_uring_register(fd_null, no_arg_ops[i].op, path_null,
-				      0xdeadbeef);
-		printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, %u) = %s\n",
-		       fd_null, path_null,
-		       XLAT_SEL(no_arg_ops[i].op, no_arg_ops[i].str),
-		       path_null, 0xdeadbeef, errstr);
-
-		for (size_t j = 0; j < ARRAY_SIZE(op_flags); ++j) {
-			sys_io_uring_register(fd_null, no_arg_ops[i].op |
-						       op_flags[j].val,
-					      path_null, 0xdeadbeef);
-			printf("io_uring_register(%u, " XLAT_FMT "|" XLAT_FMT
-			       ", %p, %u) = %s\n",
-			       fd_null,
-			       XLAT_SEL(no_arg_ops[i].op, no_arg_ops[i].str),
-			       XLAT_SEL(op_flags[j].val, op_flags[j].str),
-			       path_null, 0xdeadbeef, errstr);
-		}
-	}
-
-
-	/* IORING_REGISTER_BUFFERS */
-	sys_io_uring_register(fd_null, 0, arg_iov, ARRAY_SIZE(iov));
+	sys_io_uring_register(fd_null, 0, arg_iov, iov_len);
 	printf("io_uring_register(%u<%s>, "
 	       XLAT_KNOWN(0, "IORING_REGISTER_BUFFERS")
 	       ", [{iov_base=%p, iov_len=%lu}, {iov_base=%p, iov_len=%lu}]"
-	       ", %u) = %s\n",
+	       ", %zu) = %s\n",
 	       fd_null, path_null, iov[0].iov_base,
 	       (unsigned long) iov[0].iov_len,
 	       iov[1].iov_base, (unsigned long) iov[1].iov_len,
-	       (unsigned int) ARRAY_SIZE(iov), errstr);
+	       iov_len, errstr);
+}
 
-
+static void
+test_IORING_REGISTER_FILES(int fd_null, int fd_full, const int *arg_fds,
+			   const int *fds, size_t fds_len)
+{
 	/* Operations with an fd array argument */
 	static const struct {
 		unsigned int op;
@@ -258,18 +171,20 @@ main(void)
 	};
 
 	for (size_t i = 0; i < ARRAY_SIZE(fd_arr_ops); i++) {
-		sys_io_uring_register(fd_null, fd_arr_ops[i].op, arg_fds,
-				      ARRAY_SIZE(fds));
+		sys_io_uring_register(fd_null, fd_arr_ops[i].op, arg_fds, fds_len);
 		printf("io_uring_register(%u<%s>, " XLAT_FMT
-		       ", [%u<%s>, %u<%s>, -1, -2, -3], %u) = %s\n",
+		       ", [%u<%s>, %u<%s>, -1, -2, -3], %zu) = %s\n",
 		       fd_null, path_null,
 		       XLAT_SEL(fd_arr_ops[i].op, fd_arr_ops[i].str),
 		       fd_full, path_full, fd_null, path_null,
-		       (unsigned int) ARRAY_SIZE(fds), errstr);
+		       fds_len, errstr);
+	}
 	}
 
-
-	/* IORING_REGISTER_FILES_UPDATE */
+static void
+test_IORING_REGISTER_FILES_UPDATE(int fd_null, int fd_full, const int *fds,
+				  size_t fds_len)
+{
 	struct io_uring_files_update bogus_iufu;
 	struct io_uring_files_update iufu;
 
@@ -293,20 +208,22 @@ main(void)
 	memset(&iufu, 0, sizeof(iufu));
 	iufu.offset = 0xdeadc0deU;
 	iufu.fds = (uintptr_t) fds;
-	sys_io_uring_register(fd_null, 6, &iufu, ARRAY_SIZE(fds));
+	sys_io_uring_register(fd_null, 6, &iufu, fds_len);
 	printf("io_uring_register(%u<%s>, "
 	       XLAT_KNOWN(0x6, "IORING_REGISTER_FILES_UPDATE")
 	       ", {offset=3735929054, fds=[%u<%s>, %u<%s>, -1, "
 	       XLAT_KNOWN(-2, "IORING_REGISTER_FILES_SKIP")
-	       ", -3]}, %u) = %s\n",
+	       ", -3]}, %zu) = %s\n",
 	       fd_null, path_null, fd_full, path_full, fd_null, path_null,
-	       (unsigned int) ARRAY_SIZE(fds), errstr);
+	       fds_len, errstr);
+}
 
+static void
+test_IORING_REGISTER_PROBE(int fd_null)
+{
 	struct io_uring_probe *const probe = tail_alloc(sizeof(*probe) +
 		       (DEFAULT_STRLEN + 1) * sizeof(struct io_uring_probe_op));
 
-
-	/* IORING_REGISTER_PROBE */
 	sys_io_uring_register(fd_null, IORING_REGISTER_PROBE, NULL, 0xfacefeed);
 	printf("io_uring_register(%u<%s>, " XLAT_FMT
 	       ", NULL, 4207869677) = %s\n",
@@ -471,9 +388,11 @@ main(void)
 	       probe,
 #endif
 	       errstr);
+}
 
-
-	/* IORING_REGISTER_RESTRICTIONS */
+static void
+test_IORING_REGISTER_RESTRICTIONS(int fd_null)
+{
 	static const struct {
 		uint16_t    opcode;
 		const char *opcode_str;
@@ -666,9 +585,15 @@ main(void)
 		printf("], %zu) = %s\n",
 		       ARRAY_SIZE(restrictions_data) + !!(j == 1), errstr);
 	}
+}
 
-
-	/* IORING_REGISTER_FILES2, IORING_REGISTER_BUFFERS2 */
+static void
+test_IORING_REGISTER_FILES2_BUFFERS2(int fd_null,
+				     const struct iovec *arg_iov,
+				     const struct iovec *iov, size_t iov_len,
+				     const int *arg_fds, const int *fds,
+				     size_t fds_len)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -722,12 +647,12 @@ main(void)
 		}
 
 		for (size_t j = 0; j < 256; j++) {
-			void *endptr = i ? (void *) (arg_iov + ARRAY_SIZE(iov))
-					 : (void *) (arg_fds + ARRAY_SIZE(fds));
+			void *endptr = i ? (void *) (arg_iov + iov_len)
+					 : (void *) (arg_fds + fds_len);
 
 			rsrc_reg->data = i ? (uintptr_t) arg_iov
 					  : (uintptr_t) arg_fds;
-			rsrc_reg->nr = i ? ARRAY_SIZE(iov) : ARRAY_SIZE(fds);
+			rsrc_reg->nr = i ? iov_len : fds_len;
 			rsrc_reg->tags = (uintptr_t) (arg_tags
 						      + ARRAY_SIZE(tags)
 						      - rsrc_reg->nr);
@@ -757,8 +682,7 @@ main(void)
 				       fd_null, path_null,
 				       XLAT_SEL(rsrc_reg_ops[i].op,
 						rsrc_reg_ops[i].str),
-				       j & 32 ? (i ? ARRAY_SIZE(iov)
-						   : ARRAY_SIZE(fds))
+				       j & 32 ? (i ? iov_len : fds_len)
 						+ !!(j & 16) : 0,
 				       ARR_ITEM(rsrc_flags, j >> 6).str,
 				       j & 128 ? ", resv2=0xfacecafebeeffeed"
@@ -779,9 +703,16 @@ main(void)
 			}
 		}
 	}
+}
 
-
-	/* IORING_REGISTER_FILES_UPDATE2, IORING_REGISTER_BUFFERS_UPDATE */
+static void
+test_IORING_REGISTER_FILES_UPDATE2_BUFFERS_UPDATE(int fd_null,
+						  const struct iovec *arg_iov,
+						  const struct iovec *iov,
+						  size_t iov_len,
+						  const int *arg_fds,
+						  const int *fds, size_t fds_len)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -789,6 +720,9 @@ main(void)
 		{ 14, "IORING_REGISTER_FILES_UPDATE2" },
 		{ 16, "IORING_REGISTER_BUFFERS_UPDATE" },
 	};
+	static const uint64_t tags[] = { 0x1337, 1, 0xdead, 0xfacefeed,
+					 0xbadc0deddadfacedULL, 0 };
+	const uint64_t *const arg_tags = tail_memdup(tags, sizeof(tags));
 
 	struct io_uring_rsrc_update2 *const bogus_rsrc_upd = tail_alloc(24);
 	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_rsrc_update2, rsrc_upd);
@@ -825,12 +759,12 @@ main(void)
 		}
 
 		for (size_t j = 0; j < 256; j++) {
-			void *endptr = i ? (void *) (arg_iov + ARRAY_SIZE(iov))
-					 : (void *) (arg_fds + ARRAY_SIZE(fds));
+			void *endptr = i ? (void *) (arg_iov + iov_len)
+					 : (void *) (arg_fds + fds_len);
 
 			rsrc_upd->data = i ? (uintptr_t) arg_iov
 					  : (uintptr_t) arg_fds;
-			rsrc_upd->nr = i ? ARRAY_SIZE(iov) : ARRAY_SIZE(fds);
+			rsrc_upd->nr = i ? iov_len : fds_len;
 			rsrc_upd->tags = (uintptr_t) (arg_tags
 						      + ARRAY_SIZE(tags)
 						      - rsrc_upd->nr);
@@ -869,8 +803,7 @@ main(void)
 				print_rsrc_tags(arg_tags, tags, i, j,
 						arg_tags + ARRAY_SIZE(tags));
 				printf(", nr=%zu%s",
-				       j & 32 ? (i ? ARRAY_SIZE(iov)
-						   : ARRAY_SIZE(fds))
+				       j & 32 ? (i ? iov_len : fds_len)
 						+ !!(j & 16) : 0,
 				       j & 128 ? ", resv2=0xfacecafe"
 					       : "");
@@ -884,11 +817,13 @@ main(void)
 				printf("}, %zu) = %s\n",
 				       sizeof(*rsrc_upd) + (k / 2) * 8, errstr);
 			}
+			}
 		}
 	}
 
-
-	/* IORING_REGISTER_IOWQ_AFF */
+static void
+test_IORING_REGISTER_IOWQ_AFF(int fd_null)
+{
 	unsigned long aff[] = {
 		(unsigned long) 0xbadc0deddadfacedULL,
 		(unsigned long) 0xfacefeeddeadbeefULL,
@@ -952,9 +887,11 @@ main(void)
 #endif
 	       "], %zu) = %s\n",
 	       fd_null, path_null, sizeof(aff), errstr);
+}
 
-
-	/* IORING_REGISTER_IOWQ_MAX_WORKERS */
+static void
+test_IORING_REGISTER_IOWQ_MAX_WORKERS(int fd_null)
+{
 	unsigned int maxw[] = { 0, 1, 0xbedfaced };
 	const unsigned int *const arg_maxw = tail_memdup(maxw, sizeof(maxw));
 	const unsigned int *arg_maxw_end = arg_maxw + ARRAY_SIZE(maxw);
@@ -1003,9 +940,12 @@ main(void)
 	       arg_maxw,
 #endif
 	       errstr);
+}
 
-
-	/* IORING_REGISTER_RING_FDS, IORING_UNREGISTER_RING_FDS */
+static void
+test_IORING_REGISTER_RING_FDS(int fd_null, const int *fds,
+			      const char *const paths[], size_t fds_len)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -1025,7 +965,7 @@ main(void)
 		ringfds[i].offset = ARR_ITEM(ringfd_off, i);
 		ringfds[i].resv = i % 2 ? i * 0x1010101 : 0;
 		ringfds[i].data = (i % 4 ? 0xbadc0ded00000000ULL : 0)
-				  | ARR_ITEM(fds, i);
+				  | fds[i % fds_len];
 	}
 
 	for (size_t i = 0; i < ARRAY_SIZE(ringfd_ops); i++) {
@@ -1072,7 +1012,7 @@ main(void)
 				if (k % 2)
 					printf(", resv=%#x", k * 0x1010101);
 
-				const size_t fdid = k % ARRAY_SIZE(fds);
+				const size_t fdid = k % fds_len;
 				if (ringfd_ops[i].op == 20) {
 					printf(", data=%d%s%s%s",
 					       fds[fdid],
@@ -1080,7 +1020,7 @@ main(void)
 					       paths[fdid] ? paths[fdid] : "",
 					       paths[fdid] ? ">": "");
 				} else {
-					if (!((k % ARRAY_SIZE(fds) == 1)
+					if (!((k % fds_len == 1)
 					      && !(k % 4))) {
 						printf(", data=%#llx",
 						       (k % 4
@@ -1096,10 +1036,12 @@ main(void)
 				printf(" /* %p */", ringfds + ringfd_count);
 			printf("], %zu) = %s\n", sz, errstr);
 		}
+		}
 	}
 
-
-	/* IORING_REGISTER_PBUF_RING, IORING_UNREGISTER_PBUF_RING */
+static void
+test_IORING_REGISTER_PBUF_RING(int fd_null)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -1165,9 +1107,12 @@ main(void)
 			}
 			printf("}, 1) = %s\n", errstr);
 		}
+		}
 	}
 
-	/* IORING_REGISTER_SYNC_CANCEL */
+static void
+test_IORING_REGISTER_SYNC_CANCEL(int fd_null)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -1259,8 +1204,11 @@ main(void)
 			printf("}, 1) = %s\n", errstr);
 		}
 	}
+}
 
-	/* IORING_REGISTER_FILE_ALLOC_RANGE */
+static void
+test_IORING_REGISTER_FILE_ALLOC_RANGE(int fd_null)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -1313,10 +1261,13 @@ main(void)
 			if (j & 4)
 				printf(", resv=0xbadc0de1dadface2");
 			printf("}, 1) = %s\n", errstr);
+	}
 		}
 	}
 
-	/* IORING_REGISTER_PBUF_STATUS */
+static void
+test_IORING_REGISTER_PBUF_STATUS(int fd_null)
+{
 	static const struct {
 		unsigned int op;
 		const char *str;
@@ -1380,10 +1331,13 @@ main(void)
 			printf("}");
 #endif
 			printf(", 1) = %s\n", errstr);
+	}
 		}
 	}
 
-	/* IORING_REGISTER_NAPI, IORING_UNREGISTER_NAPI */
+static void
+test_IORING_REGISTER_NAPI(int fd_null)
+{
 	static const struct strval32 napi_ops[] = {
 		{ ARG_STR(IORING_REGISTER_NAPI) },
 		{ ARG_STR(IORING_UNREGISTER_NAPI) },
@@ -1475,10 +1429,13 @@ main(void)
 				printf("}");
 			}
 			printf(", 1) = %s\n", errstr);
+	}
 		}
 	}
 
-	/* IORING_REGISTER_CLOCK */
+static void
+test_IORING_REGISTER_CLOCK(int fd_null)
+{
 	static const struct strval32 clock_ops =
 		{ ARG_STR(IORING_REGISTER_CLOCK) };
 
@@ -1545,8 +1502,11 @@ main(void)
 			       clock_register->__resv[2]);
 		printf("}, 0) = %s\n", errstr);
 	}
+}
 
-	/* IORING_REGISTER_CLONE_BUFFERS */
+static void
+test_IORING_REGISTER_CLONE_BUFFERS(int fd_null, int fd_full)
+{
 	static const struct strval32 clone_buffers_ops =
 		{ ARG_STR(IORING_REGISTER_CLONE_BUFFERS) };
 
@@ -1623,8 +1583,11 @@ main(void)
 			}
 		printf("}, 1) = %s\n", errstr);
 	}
+}
 
-	/* IORING_REGISTER_SEND_MSG_RING */
+static void
+test_IORING_REGISTER_SEND_MSG_RING(int fd_null, int fd_full)
+{
 	static const struct strval32 send_msg_ring_ops =
 		{ ARG_STR(IORING_REGISTER_SEND_MSG_RING) };
 
@@ -1719,8 +1682,11 @@ main(void)
 	       sqe->file_index,
 	       (unsigned long long) sqe->optval,
 	       errstr);
+}
 
-	/* IORING_REGISTER_ZCRX_IFQ */
+static void
+test_IORING_REGISTER_ZCRX_IFQ(int fd_null)
+{
 	static const struct strval32 zcrx_ifq_ops =
 		{ ARG_STR(IORING_REGISTER_ZCRX_IFQ) };
 
@@ -1803,8 +1769,11 @@ main(void)
 	       (unsigned long long) zcrx_ifq->__resv[1],
 	       (unsigned long long) zcrx_ifq->__resv[2],
 	       errstr);
+}
 
-	/* IORING_REGISTER_RESIZE_RINGS */
+static void
+test_IORING_REGISTER_RESIZE_RINGS(int fd_null)
+{
 	static const struct strval32 resize_rings_ops =
 		{ ARG_STR(IORING_REGISTER_RESIZE_RINGS) };
 
@@ -1897,8 +1866,11 @@ main(void)
 	       params->sq_entries, params->cq_entries,
 	       params->resv[0], params->resv[1], params->resv[2],
 	       errstr);
+}
 
-	/* IORING_REGISTER_MEM_REGION */
+static void
+test_IORING_REGISTER_MEM_REGION(int fd_null)
+{
 	static const struct strval32 mem_region_ops =
 		{ ARG_STR(IORING_REGISTER_MEM_REGION) };
 
@@ -1980,6 +1952,661 @@ main(void)
 	       (unsigned long long) mem_region->__resv[0],
 	       (unsigned long long) mem_region->__resv[1],
 	       errstr);
+}
+
+static void
+test_IORING_REGISTER_QUERY(int fd_null)
+{
+	static const struct strval32 query_ops =
+		{ ARG_STR(IORING_REGISTER_QUERY) };
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_hdr, hdr);
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_opcode, opcode_data);
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_zcrx, zcrx_data);
+
+	/* Test 1: Invalid nargs (non-zero) */
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       hdr, errstr);
+
+	/* Test 2: NULL pointer for arg */
+	sys_io_uring_register(fd_null, query_ops.val, NULL, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       errstr);
+
+	/* Test 3: Invalid (non-readable) pointer for arg */
+	sys_io_uring_register(fd_null, query_ops.val, hdr + 1, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       hdr + 1, errstr);
+
+	/* Test 4: Single entry with IO_URING_QUERY_OPCODES, NULL next_entry */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) opcode_data;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = sizeof(*opcode_data);
+	hdr->result = 0;
+
+	memset(opcode_data, 0, sizeof(*opcode_data));
+	opcode_data->nr_request_opcodes = 50;
+	opcode_data->nr_register_opcodes = 20;
+	opcode_data->feature_flags = IORING_FEAT_SINGLE_MMAP;
+	opcode_data->ring_setup_flags = IORING_SETUP_SQPOLL;
+	opcode_data->enter_flags = IORING_ENTER_GETEVENTS;
+	opcode_data->sqe_flags = IOSQE_IO_DRAIN;
+	opcode_data->nr_query_opcodes = 3;
+	opcode_data->__pad = 0;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={nr_request_opcodes=%u, nr_register_opcodes=%u"
+	       ", feature_flags=" XLAT_FMT ", ring_setup_flags=" XLAT_FMT
+	       ", enter_flags=" XLAT_FMT ", sqe_flags=" XLAT_FMT
+	       ", nr_query_opcodes=%u}, next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data,
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       (unsigned int) sizeof(*opcode_data),
+	       opcode_data->nr_request_opcodes,
+	       opcode_data->nr_register_opcodes,
+	       XLAT_ARGS(IORING_FEAT_SINGLE_MMAP),
+	       XLAT_ARGS(IORING_SETUP_SQPOLL),
+	       XLAT_ARGS(IORING_ENTER_GETEVENTS),
+	       XLAT_ARGS(IOSQE_IO_DRAIN),
+	       opcode_data->nr_query_opcodes,
+	       errstr);
+
+	/* Test 5: Single entry with IO_URING_QUERY_ZCRX */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) zcrx_data;
+	hdr->query_op = IO_URING_QUERY_ZCRX;
+	hdr->size = sizeof(*zcrx_data);
+	hdr->result = 0;
+
+	memset(zcrx_data, 0, sizeof(*zcrx_data));
+	zcrx_data->register_flags = ZCRX_REG_IMPORT;
+	zcrx_data->area_flags = IORING_ZCRX_AREA_DMABUF;
+	zcrx_data->nr_ctrl_opcodes = 5;
+	zcrx_data->rq_hdr_size = 64;
+	zcrx_data->rq_hdr_alignment = 8;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={register_flags=" XLAT_FMT ", area_flags=" XLAT_FMT
+	       ", nr_ctrl_opcodes=%u, rq_hdr_size=%u, rq_hdr_alignment=%u}"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       zcrx_data,
+	       XLAT_ARGS(IO_URING_QUERY_ZCRX),
+	       (unsigned int) sizeof(*zcrx_data),
+	       XLAT_ARGS(ZCRX_REG_IMPORT),
+	       XLAT_ARGS(IORING_ZCRX_AREA_DMABUF),
+	       zcrx_data->nr_ctrl_opcodes,
+	       zcrx_data->rq_hdr_size,
+	       zcrx_data->rq_hdr_alignment,
+	       errstr);
+
+	/* Test 6: Single entry with IO_URING_QUERY_SCQ */
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_scq, scq_data);
+
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) scq_data;
+	hdr->query_op = IO_URING_QUERY_SCQ;
+	hdr->size = sizeof(*scq_data);
+	hdr->result = 0;
+
+	memset(scq_data, 0, sizeof(*scq_data));
+	scq_data->hdr_size = 128;
+	scq_data->hdr_alignment = 16;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={hdr_size=%llu, hdr_alignment=%llu}"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       scq_data,
+	       XLAT_ARGS(IO_URING_QUERY_SCQ),
+	       (unsigned int) sizeof(*scq_data),
+	       (unsigned long long) scq_data->hdr_size,
+	       (unsigned long long) scq_data->hdr_alignment,
+	       errstr);
+
+	/* Test 7: Single entry with NULL query_data */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = 0;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = 48;
+	hdr->result = 0;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=NULL, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       hdr->size,
+	       errstr);
+
+	/* Test 8: Single entry with invalid query_op */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) opcode_data;
+	hdr->query_op = 999; /* Invalid opcode */
+	hdr->size = sizeof(*opcode_data);
+	hdr->result = 0;
+
+	memset(opcode_data, 0, sizeof(*opcode_data));
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=0x%x" NRAW(" /* IO_URING_QUERY_??? */")
+	       ", size=%u, result=0, query_data=%p, next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data,
+	       hdr->query_op,
+	       hdr->size,
+	       opcode_data,
+	       errstr);
+
+	/* Test 9: Two-entry linked list (OPCODES -> ZCRX) */
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_hdr, hdr2);
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_opcode, opcode_data2);
+
+	/* First entry */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = (uintptr_t) hdr2;
+	hdr->query_data = (uintptr_t) opcode_data2;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = sizeof(*opcode_data2);
+	hdr->result = 0;
+
+	memset(opcode_data2, 0, sizeof(*opcode_data2));
+	opcode_data2->nr_request_opcodes = 30;
+	opcode_data2->nr_register_opcodes = 15;
+
+	/* Second entry */
+	memset(hdr2, 0, sizeof(*hdr2));
+	hdr2->next_entry = 0;
+	hdr2->query_data = (uintptr_t) zcrx_data;
+	hdr2->query_op = IO_URING_QUERY_ZCRX;
+	hdr2->size = sizeof(*zcrx_data);
+	hdr2->result = 0;
+
+	memset(zcrx_data, 0, sizeof(*zcrx_data));
+	zcrx_data->nr_ctrl_opcodes = 3;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={nr_request_opcodes=%u, nr_register_opcodes=%u"
+	       ", feature_flags=0, ring_setup_flags=0, enter_flags=0"
+	       ", sqe_flags=0, nr_query_opcodes=0}, next_entry="
+	       "{query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={register_flags=0, area_flags=0"
+	       ", nr_ctrl_opcodes=%u, rq_hdr_size=0, rq_hdr_alignment=0}"
+	       ", next_entry=NULL}}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data2,
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       (unsigned int) sizeof(*opcode_data2),
+	       opcode_data2->nr_request_opcodes,
+	       opcode_data2->nr_register_opcodes,
+	       zcrx_data,
+	       XLAT_ARGS(IO_URING_QUERY_ZCRX),
+	       (unsigned int) sizeof(*zcrx_data),
+	       zcrx_data->nr_ctrl_opcodes,
+	       errstr);
+
+	/* Test 11: Non-zero reserved fields (__resv) */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) opcode_data;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = sizeof(*opcode_data);
+	hdr->result = 0;
+	hdr->__resv[0] = 0xdeadbeef;
+	hdr->__resv[1] = 0xcafebabe;
+	hdr->__resv[2] = 0x12345678;
+
+	memset(opcode_data, 0, sizeof(*opcode_data));
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", __resv=[%#x, %#x, %#x], query_data={nr_request_opcodes=0"
+	       ", nr_register_opcodes=0, feature_flags=0, ring_setup_flags=0"
+	       ", enter_flags=0, sqe_flags=0, nr_query_opcodes=0}"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data,
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       (unsigned int) sizeof(*opcode_data),
+	       hdr->__resv[0],
+	       hdr->__resv[1],
+	       hdr->__resv[2],
+	       errstr);
+
+	/* Test 12: Non-zero __pad in io_uring_query_opcode */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) opcode_data;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = sizeof(*opcode_data);
+	hdr->result = 0;
+
+	memset(opcode_data, 0, sizeof(*opcode_data));
+	opcode_data->__pad = 0x12345678;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={nr_request_opcodes=0, nr_register_opcodes=0"
+	       ", feature_flags=0, ring_setup_flags=0, enter_flags=0"
+	       ", sqe_flags=0, nr_query_opcodes=0, __pad=%#x}"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data,
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       (unsigned int) sizeof(*opcode_data),
+	       opcode_data->__pad,
+	       errstr);
+
+	/* Test 13: Non-zero reserved fields in io_uring_query_zcrx */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) zcrx_data;
+	hdr->query_op = IO_URING_QUERY_ZCRX;
+	hdr->size = sizeof(*zcrx_data);
+	hdr->result = 0;
+
+	memset(zcrx_data, 0, sizeof(*zcrx_data));
+	zcrx_data->__resv1 = 0xdeadbeef;
+	zcrx_data->__resv2 = 0xcafebabe12345678ULL;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={register_flags=0, area_flags=0"
+	       ", nr_ctrl_opcodes=0, rq_hdr_size=0"
+	       ", rq_hdr_alignment=0, __resv1=%#x, __resv2=%#llx}"
+	       ", next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       zcrx_data,
+	       XLAT_ARGS(IO_URING_QUERY_ZCRX),
+	       (unsigned int) sizeof(*zcrx_data),
+	       zcrx_data->__resv1,
+	       (unsigned long long) zcrx_data->__resv2,
+	       errstr);
+
+	/* Test 14: Invalid pointer in middle of chain */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = (uintptr_t) (hdr + 1); /* Invalid pointer */
+	hdr->query_data = (uintptr_t) opcode_data;
+	hdr->query_op = IO_URING_QUERY_OPCODES;
+	hdr->size = sizeof(*opcode_data);
+	hdr->result = 0;
+
+	memset(opcode_data, 0, sizeof(*opcode_data));
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={nr_request_opcodes=0, nr_register_opcodes=0"
+	       ", feature_flags=0, ring_setup_flags=0, enter_flags=0"
+	       ", sqe_flags=0, nr_query_opcodes=0}, next_entry=%p}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       opcode_data,
+	       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+	       (unsigned int) sizeof(*opcode_data),
+	       hdr + 1,
+	       errstr);
+
+	/* Test 15: sequence_truncation_needed() - chain of DEFAULT_STRLEN entries */
+	struct io_uring_query_hdr *hdr_chain[DEFAULT_STRLEN + 1];
+
+	/* Create chain of DEFAULT_STRLEN+1 entries, all using the same opcode_data */
+	for (int i = DEFAULT_STRLEN; i >= 0; --i) {
+		hdr_chain[i] = tail_alloc(sizeof(*hdr_chain[i]));
+
+		memset(hdr_chain[i], 0, sizeof(*hdr_chain[i]));
+		hdr_chain[i]->query_data = (uintptr_t) opcode_data;
+		hdr_chain[i]->query_op = IO_URING_QUERY_OPCODES;
+		hdr_chain[i]->size = sizeof(*opcode_data);
+		hdr_chain[i]->result = i;
+		if (i < DEFAULT_STRLEN)
+			hdr_chain[i]->next_entry = (uintptr_t) hdr_chain[i + 1];
+		else
+			hdr_chain[i]->next_entry = 0;
+	}
+
+	/* Test with DEFAULT_STRLEN+1 entries - should truncate */
+	sys_io_uring_register(fd_null, query_ops.val, hdr_chain[0], 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", ",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str));
+	for (int i = 0; i < DEFAULT_STRLEN; ++i) {
+		printf("{query_data=%p, query_op=" XLAT_FMT ", size=%u, result=%d"
+		       ", query_data={nr_request_opcodes=0, nr_register_opcodes=0"
+		       ", feature_flags=0, ring_setup_flags=0, enter_flags=0"
+		       ", sqe_flags=0, nr_query_opcodes=0}, next_entry=",
+		       opcode_data,
+		       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+		       (unsigned int) sizeof(*opcode_data),
+		       (int) i);
+	}
+	printf("%p /* ... */",
+	       hdr_chain[DEFAULT_STRLEN]);
+	for (int i = 0; i < DEFAULT_STRLEN; ++i)
+		printf("}");
+	printf(", 0) = %s\n", errstr);
+
+	/* Test with DEFAULT_STRLEN entries - should not truncate */
+	/* Set last entry's next_entry to NULL to create chain of exactly DEFAULT_STRLEN */
+	hdr_chain[DEFAULT_STRLEN - 1]->next_entry = 0;
+	sys_io_uring_register(fd_null, query_ops.val, hdr_chain[0], 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", ",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str));
+	for (int i = 0; i < DEFAULT_STRLEN; ++i) {
+		printf("{query_data=%p, query_op=" XLAT_FMT ", size=%u, result=%d"
+		       ", query_data={nr_request_opcodes=0, nr_register_opcodes=0"
+		       ", feature_flags=0, ring_setup_flags=0, enter_flags=0"
+		       ", sqe_flags=0, nr_query_opcodes=0}, next_entry=",
+		       opcode_data,
+		       XLAT_ARGS(IO_URING_QUERY_OPCODES),
+		       (unsigned int) sizeof(*opcode_data),
+		       (int) i);
+	}
+	printf("NULL");
+	for (int i = 0; i < DEFAULT_STRLEN; ++i)
+		printf("}");
+	printf(", 0) = %s\n", errstr);
+}
+
+static void
+test_IORING_REGISTER_ZCRX_CTRL(int fd_null, int fd_full)
+{
+	static const struct strval32 zcrx_ctrl_ops =
+		{ ARG_STR(IORING_REGISTER_ZCRX_CTRL) };
+
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct zcrx_ctrl, ctrl);
+
+	/* Test 1: Invalid nargs (non-zero) */
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 0xdeadbeef);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, %u) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl, 0xdeadbeef, errstr);
+
+	/* Test 2: NULL pointer for arg */
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, NULL, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", NULL, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       errstr);
+
+	/* Test 3: Invalid (non-readable) pointer for arg */
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl + 1, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl + 1, errstr);
+
+	/* Test 4: Basic FLUSH_RQ operation */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 0x12345678;
+	ctrl->op = ZCRX_CTRL_FLUSH_RQ;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", zc_flush={}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_FLUSH_RQ),
+	       errstr);
+
+	/* Test 5: Basic EXPORT operation */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 0x87654321;
+	ctrl->op = ZCRX_CTRL_EXPORT;
+	ctrl->zc_export.zcrx_fd = fd_full;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+#if RETVAL_INJECTED
+	       ", zc_export={zcrx_fd=%u<%s>}"
+#endif
+	       "}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_EXPORT),
+#if RETVAL_INJECTED
+	       fd_full, path_full,
+#endif
+	       errstr);
+
+	/* Test 6: Non-zero reserved fields in main structure */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 1;
+	ctrl->op = ZCRX_CTRL_FLUSH_RQ;
+	ctrl->__resv[0] = 0xdeadbeefcafebabeULL;
+	ctrl->__resv[1] = 0x1234567890abcdefULL;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", __resv=[%#llx, %#llx], zc_flush={}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_FLUSH_RQ),
+	       (unsigned long long) ctrl->__resv[0],
+	       (unsigned long long) ctrl->__resv[1],
+	       errstr);
+
+	/* Test 7: Non-zero reserved fields in zc_flush */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 1;
+	ctrl->op = ZCRX_CTRL_FLUSH_RQ;
+	ctrl->zc_flush.__resv[0] = 0x1111111111111111ULL;
+	ctrl->zc_flush.__resv[5] = 0x5555555555555555ULL;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", zc_flush={"
+	       "__resv=[%#llx, 0, 0, 0, 0, %#llx]}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_FLUSH_RQ),
+	       (unsigned long long) ctrl->zc_flush.__resv[0],
+	       (unsigned long long) ctrl->zc_flush.__resv[5],
+	       errstr);
+
+	/* Test 8: Non-zero reserved fields in zc_export */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 1;
+	ctrl->op = ZCRX_CTRL_EXPORT;
+	ctrl->zc_export.zcrx_fd = 99;
+	ctrl->zc_export.__resv1[0] = 0xdeadbeef;
+	ctrl->zc_export.__resv1[10] = 0xcafebabe;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT "%s}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_EXPORT),
+#if RETVAL_INJECTED
+	       ", zc_export={zcrx_fd=99, __resv1=[0xdeadbeef, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xcafebabe]}",
+#else
+	       "",
+#endif
+	       errstr);
+
+	/* Test 9: Unknown opcode */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 1;
+	ctrl->op = 0xdeadbeef;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=%#x" NRAW(" /* ZCRX_CTRL_??? */") "}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id, ctrl->op,
+	       errstr);
+}
+
+int
+main(void)
+{
+	const struct iovec iov[] = {
+		{
+			.iov_base = (void *) (unsigned long) 0xfacefeedcafef00d,
+			.iov_len = (unsigned long) 0xdeadfacebeefcafe
+		},
+		{
+			.iov_base = (void *) path_null,
+			.iov_len = sizeof(path_null)
+		}
+	};
+	const struct iovec *const arg_iov = tail_memdup(iov, sizeof(iov));
+
+	skip_if_unavailable("/proc/self/fd/");
+
+	close(0); /* Trying to get fd 0 for /dev/null */
+	int fd_null = open(path_null, O_RDONLY);
+	if (fd_null < 0)
+		perror_msg_and_fail("open: %s", path_null);
+
+	int fd_full = open(path_full, O_RDONLY);
+	if (fd_full < 0)
+		perror_msg_and_fail("open: %s", path_full);
+
+	int fds[] = { fd_full, fd_null, -1, -2, -3 };
+	const char *paths[ARRAY_SIZE(fds)] = { path_full, path_null };
+	const int *const arg_fds = tail_memdup(fds, sizeof(fds));
+
+	/* Invalid opcode */
+	static const unsigned int invalid_ops[] = { 0x7fffffffU, 37 };
+	static const struct strval32 op_flags[] = {
+		{ ARG_STR(IORING_REGISTER_USE_REGISTERED_RING) },
+	};
+
+	for (size_t i = 0; i < ARRAY_SIZE(invalid_ops); i++) {
+		sys_io_uring_register(fd_null, invalid_ops[i], path_null,
+				      0xdeadbeef);
+		printf("io_uring_register(%u<%s>, %#x"
+		       NRAW(" /* IORING_REGISTER_??? */") ", %p, %u) = %s\n",
+		       fd_null, path_null, invalid_ops[i], path_null,
+		       0xdeadbeef, errstr);
+
+		for (size_t j = 0; j < ARRAY_SIZE(op_flags); ++j) {
+			sys_io_uring_register(fd_null, invalid_ops[i] |
+						       op_flags[j].val,
+					      path_null, 0xdeadbeef);
+			printf("io_uring_register(%u, %#x"
+			       NRAW(" /* IORING_REGISTER_??? */") "|" XLAT_FMT
+			       ", %p, %u) = %s\n",
+			       fd_null, invalid_ops[i],
+			       XLAT_SEL(op_flags[j].val, op_flags[j].str),
+			       path_null, 0xdeadbeef, errstr);
+		}
+	}
+
+	/* Opcodes without an argument */
+	static const struct {
+		unsigned int op;
+		const char *str;
+	} no_arg_ops[] = {
+		{ 1, "IORING_UNREGISTER_BUFFERS" },
+		{ 3, "IORING_UNREGISTER_FILES" },
+		{ 5, "IORING_UNREGISTER_EVENTFD" },
+		{ 9, "IORING_REGISTER_PERSONALITY" },
+		{ 10, "IORING_UNREGISTER_PERSONALITY" },
+		{ 12, "IORING_REGISTER_ENABLE_RINGS" },
+		{ 18, "IORING_UNREGISTER_IOWQ_AFF" },
+	};
+
+	for (size_t i = 0; i < ARRAY_SIZE(no_arg_ops); i++) {
+		sys_io_uring_register(fd_null, no_arg_ops[i].op, path_null,
+				      0xdeadbeef);
+		printf("io_uring_register(%u<%s>, " XLAT_FMT ", %p, %u) = %s\n",
+		       fd_null, path_null,
+		       XLAT_SEL(no_arg_ops[i].op, no_arg_ops[i].str),
+		       path_null, 0xdeadbeef, errstr);
+
+		for (size_t j = 0; j < ARRAY_SIZE(op_flags); ++j) {
+			sys_io_uring_register(fd_null, no_arg_ops[i].op |
+						       op_flags[j].val,
+					      path_null, 0xdeadbeef);
+			printf("io_uring_register(%u, " XLAT_FMT "|" XLAT_FMT
+			       ", %p, %u) = %s\n",
+			       fd_null,
+			       XLAT_SEL(no_arg_ops[i].op, no_arg_ops[i].str),
+			       XLAT_SEL(op_flags[j].val, op_flags[j].str),
+			       path_null, 0xdeadbeef, errstr);
+		}
+	}
+
+	/* Individual opcodes */
+	test_IORING_REGISTER_BUFFERS(fd_null, arg_iov, iov, ARRAY_SIZE(iov));
+	test_IORING_REGISTER_FILES(fd_null, fd_full, arg_fds, fds, ARRAY_SIZE(fds));
+	test_IORING_REGISTER_FILES_UPDATE(fd_null, fd_full, fds, ARRAY_SIZE(fds));
+	test_IORING_REGISTER_PROBE(fd_null);
+	test_IORING_REGISTER_RESTRICTIONS(fd_null);
+	test_IORING_REGISTER_FILES2_BUFFERS2(fd_null, arg_iov, iov,
+					     ARRAY_SIZE(iov), arg_fds, fds,
+					     ARRAY_SIZE(fds));
+	test_IORING_REGISTER_FILES_UPDATE2_BUFFERS_UPDATE(fd_null, arg_iov, iov,
+							  ARRAY_SIZE(iov),
+							  arg_fds, fds,
+							  ARRAY_SIZE(fds));
+	test_IORING_REGISTER_IOWQ_AFF(fd_null);
+	test_IORING_REGISTER_IOWQ_MAX_WORKERS(fd_null);
+	test_IORING_REGISTER_RING_FDS(fd_null, fds, paths, ARRAY_SIZE(fds));
+	test_IORING_REGISTER_PBUF_RING(fd_null);
+	test_IORING_REGISTER_SYNC_CANCEL(fd_null);
+	test_IORING_REGISTER_FILE_ALLOC_RANGE(fd_null);
+	test_IORING_REGISTER_PBUF_STATUS(fd_null);
+	test_IORING_REGISTER_NAPI(fd_null);
+	test_IORING_REGISTER_CLOCK(fd_null);
+	test_IORING_REGISTER_CLONE_BUFFERS(fd_null, fd_full);
+	test_IORING_REGISTER_SEND_MSG_RING(fd_null, fd_full);
+	test_IORING_REGISTER_ZCRX_IFQ(fd_null);
+	test_IORING_REGISTER_RESIZE_RINGS(fd_null);
+	test_IORING_REGISTER_MEM_REGION(fd_null);
+	test_IORING_REGISTER_QUERY(fd_null);
+	test_IORING_REGISTER_ZCRX_CTRL(fd_null, fd_full);
 
 	puts("+++ exited with 0 +++");
 	return 0;
