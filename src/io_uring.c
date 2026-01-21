@@ -35,6 +35,12 @@
 #include "xlat/uring_mem_region_reg_flags.h"
 #include "xlat/uring_query_ops.h"
 #include "xlat/uring_zcrx_ctrl_ops.h"
+#include "xlat/uring_rw_attr_flags.h"
+#include "xlat/uring_nop_flags.h"
+#include "xlat/uring_fixed_fd_flags.h"
+#include "xlat/uring_accept_flags.h"
+#include "xlat/uring_recvsend_flags.h"
+#include "xlat/uring_socket_ops.h"
 
 static void
 print_io_sqring_offsets(const struct io_sqring_offsets *const p)
@@ -927,6 +933,158 @@ print_ioring_register_clone_buffers(struct tcb *tcp, const kernel_ulong_t addr,
 }
 
 static void
+print_io_uring_attr_pi(struct tcb *tcp, const uint64_t addr)
+{
+	struct io_uring_attr_pi attr;
+
+	CHECK_TYPE_SIZE(struct io_uring_attr_pi, 32);
+
+	if (umove_or_printaddr64(tcp, addr, &attr))
+		return;
+
+	tprint_struct_begin();
+	PRINT_FIELD_X(attr, flags);
+	tprint_struct_next();
+	PRINT_FIELD_X(attr, app_tag);
+	tprint_struct_next();
+	PRINT_FIELD_U(attr, len);
+	tprint_struct_next();
+	PRINT_FIELD_X(attr, addr);
+	tprint_struct_next();
+	PRINT_FIELD_X(attr, seed);
+	tprint_struct_next();
+	PRINT_FIELD_X(attr, rsvd);
+	tprint_struct_end();
+}
+
+static void
+print_io_uring_attr_ptr(struct tcb *tcp, const uint64_t addr,
+			unsigned long attr_type_mask)
+{
+	if (attr_type_mask & IORING_RW_ATTR_FLAG_PI) {
+		/* Decode as io_uring_attr_pi structure. */
+		print_io_uring_attr_pi(tcp, addr);
+	} else {
+		printaddr64(addr);
+	}
+}
+
+static void
+print_io_uring_sqe_flags_union(const struct io_uring_sqe *sqe)
+{
+	switch (sqe->opcode) {
+	case IORING_OP_NOP:
+	case IORING_OP_NOP128:
+		PRINT_FIELD_FLAGS(*sqe, nop_flags, uring_nop_flags,
+				 "IORING_NOP_???");
+		break;
+
+	case IORING_OP_FIXED_FD_INSTALL:
+		PRINT_FIELD_FLAGS(*sqe, install_fd_flags, uring_fixed_fd_flags,
+				 "IORING_FIXED_FD_???");
+		break;
+
+	case IORING_OP_MSG_RING:
+		PRINT_FIELD_FLAGS(*sqe, msg_ring_flags, uring_msg_ring_flags,
+				 "IORING_MSG_RING_???");
+		break;
+
+	case IORING_OP_PIPE:
+		/*
+		 * PIPE flags are in the union, but no flags are currently
+		 * defined in the kernel header.  Fall through to default
+		 * to print as hex (same as rw_flags since they're in the
+		 * same union).
+		 */
+		ATTRIBUTE_FALLTHROUGH;
+	default:
+		/*
+		 * For other opcodes, use rw_flags (default).
+		 */
+		PRINT_FIELD_X(*sqe, rw_flags);
+		break;
+	}
+}
+
+static void
+print_io_uring_sqe_ioprio(const struct io_uring_sqe *sqe)
+{
+	switch (sqe->opcode) {
+	case IORING_OP_ACCEPT:
+		/*
+		 * For accept operations, ioprio contains flags.
+		 */
+		PRINT_FIELD_FLAGS(*sqe, ioprio, uring_accept_flags,
+				  "IORING_ACCEPT_???");
+		break;
+
+	case IORING_OP_SEND:
+	case IORING_OP_SENDMSG:
+	case IORING_OP_SEND_ZC:
+	case IORING_OP_SENDMSG_ZC:
+	case IORING_OP_RECV:
+	case IORING_OP_RECVMSG:
+	case IORING_OP_RECV_ZC:
+		/*
+		 * For send/recv operations, ioprio contains flags.
+		 */
+		PRINT_FIELD_FLAGS(*sqe, ioprio, uring_recvsend_flags,
+				  "IORING_RECVSEND_???");
+		break;
+
+	default:
+		/*
+		 * For other operations, ioprio contains the actual
+		 * ioprio value.
+		 */
+		PRINT_FIELD_U(*sqe, ioprio);
+		break;
+	}
+}
+
+static bool
+is_128_byte_sqe(const struct io_uring_sqe *sqe)
+{
+	switch (sqe->opcode) {
+	case IORING_OP_NOP128:
+	case IORING_OP_URING_CMD128:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+static bool
+is_op_cmd_sqe(const struct io_uring_sqe *sqe)
+{
+	switch (sqe->opcode) {
+	case IORING_OP_URING_CMD:
+	case IORING_OP_URING_CMD128:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+static void
+print_io_uring_sqe_off(struct tcb *tcp, const struct io_uring_sqe *sqe)
+{
+	if (is_op_cmd_sqe(sqe) && getfdinode(tcp, sqe->fd)) {
+		/*
+		 * For IORING_OP_URING_CMD or IORING_OP_URING_CMD128 with
+		 * a socket fd, print off as a socket operation.
+		 */
+		PRINT_FIELD_XVAL_U(*sqe, off, uring_socket_ops,
+				   "SOCKET_URING_OP_???");
+	} else {
+		/* Not a socket or not URING_CMD/URING_CMD128, print as offset */
+		PRINT_FIELD_X(*sqe, off);
+	}
+}
+
+static void
 print_io_uring_sqe(struct tcb *tcp, const kernel_ulong_t addr)
 {
 	struct io_uring_sqe sqe;
@@ -942,22 +1100,17 @@ print_io_uring_sqe(struct tcb *tcp, const kernel_ulong_t addr)
 	tprint_struct_next();
 	PRINT_FIELD_FLAGS(sqe, flags, uring_sqe_flags, "IOSQE_???");
 	tprint_struct_next();
-	PRINT_FIELD_U(sqe, ioprio);
+	print_io_uring_sqe_ioprio(&sqe);
 	tprint_struct_next();
 	PRINT_FIELD_FD(sqe, fd, tcp);
 	tprint_struct_next();
-	PRINT_FIELD_X(sqe, off);
+	print_io_uring_sqe_off(tcp, &sqe);
 	tprint_struct_next();
 	PRINT_FIELD_X(sqe, addr);
 	tprint_struct_next();
 	PRINT_FIELD_U(sqe, len);
 	tprint_struct_next();
-	if (sqe.opcode == IORING_OP_MSG_RING) {
-		PRINT_FIELD_FLAGS(sqe, msg_ring_flags, uring_msg_ring_flags,
-				 "IORING_MSG_RING_???");
-	} else {
-		PRINT_FIELD_X(sqe, rw_flags);
-	}
+	print_io_uring_sqe_flags_union(&sqe);
 	tprint_struct_next();
 	PRINT_FIELD_X(sqe, user_data);
 	tprint_struct_next();
@@ -967,7 +1120,71 @@ print_io_uring_sqe(struct tcb *tcp, const kernel_ulong_t addr)
 	tprint_struct_next();
 	PRINT_FIELD_X(sqe, file_index);
 	tprint_struct_next();
-	PRINT_FIELD_X(sqe, optval);
+
+	/*
+	 * Decode union field based on opcode and attr_type_mask.
+	 * Note: attr_type_mask/attr_ptr and optval are in the same union.
+	 * attr_type_mask is only used for RW operations that call __io_prep_rw.
+	 */
+	switch (sqe.opcode) {
+	case IORING_OP_READ:
+	case IORING_OP_WRITE:
+	case IORING_OP_READV:
+	case IORING_OP_WRITEV:
+	case IORING_OP_READ_FIXED:
+	case IORING_OP_WRITE_FIXED:
+	case IORING_OP_READV_FIXED:
+	case IORING_OP_WRITEV_FIXED:
+	case IORING_OP_SEND:
+	case IORING_OP_RECV:
+	case IORING_OP_SENDMSG:
+	case IORING_OP_RECVMSG:
+	case IORING_OP_SEND_ZC:
+	case IORING_OP_RECV_ZC:
+	case IORING_OP_READ_MULTISHOT:
+		/*
+		 * RW operations with attr_type_mask set use attr_ptr/attr_type_mask.
+		 */
+		if (sqe.attr_type_mask) {
+			PRINT_FIELD_FLAGS(sqe, attr_type_mask, uring_rw_attr_flags,
+					 "IORING_RW_ATTR_FLAG_???");
+			tprint_struct_next();
+			PRINT_FIELD_OBJ_TCB_VAL(sqe, attr_ptr, tcp,
+						print_io_uring_attr_ptr,
+						sqe.attr_type_mask);
+			break;
+		}
+		/* RW operations without attr_type_mask fall through to optval. */
+		ATTRIBUTE_FALLTHROUGH;
+	default:
+		/*
+		 * For non-RW operations or RW operations without attr_type_mask,
+		 * decode as optval (backward compatible).
+		 */
+		tprints_field_name("optval");
+		PRINT_VAL_X(sqe.optval);
+		break;
+	}
+
+	/*
+	 * For 128-byte SQEs, decode the cmd[] array (64 bytes starting
+	 * at offset 64).
+	 *
+	 * Error handling: If reading the cmd[] array fails, print_array
+	 * will print the address gracefully. The base 64-byte structure
+	 * is already decoded, so cmd[] failure doesn't affect it.
+	 * print_array with tfetch_mem handles partial reads gracefully,
+	 * printing what it can if only partial data is available.
+	 */
+	if (is_128_byte_sqe(&sqe)) {
+		const kernel_ulong_t cmd_addr = addr + 64;
+		uint8_t cmd_buf;
+
+		tprint_struct_next();
+		tprints_field_name("cmd");
+		print_array(tcp, cmd_addr, 64, &cmd_buf, sizeof(cmd_buf),
+			    tfetch_mem, print_xint_array_member, NULL);
+	}
 
 	tprint_struct_end();
 }
