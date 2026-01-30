@@ -169,6 +169,12 @@ process_file()
 
 		__EOF__
 
+		case "$uname_m" in
+			riscv*)
+				touch "$tmpdir/asm/cpufeature-macros.h"
+				;;
+		esac
+
 	# Soft pre-include workarounds for some processed files.  Fragile.
 	case "$f" in
 		*asm/amigayle.h)
@@ -391,6 +397,14 @@ process_file()
 			sed -E '/^enum /,/^};/d' < "$s" > "$tmpdir/$f"
 			sed -En '/^enum /,/^};/ s/^[[:space:]].*/&/p' < "$s" |
 			sed -n 's/^[[:space:]]*\([A-Z][A-Z_0-9]*\)[[:space:]]*=[[:space:]]*\(DRM_\(IO\|IOW\|IOR\|IOWR\|IOC\)\)[[:space:]]*(/#define \1 \2(/
+				s/^\(#define .*)\),$/\1/p
+				s/^\(#define .*,\)$/\1 \\/p
+				s/^\([[:space:]]\+[^),]\+)\),$/\1/p' >> "$tmpdir/$f"
+			;;
+		*linux/gpib_ioctl.h)
+			sed -E '/^enum gpib_ioctl/,/^};/d' < "$s" > "$tmpdir/$f"
+			sed -En '/^enum gpib_ioctl/,/^};/ s/^[[:space:]].*/&/p' < "$s" |
+			sed -n 's/^[[:space:]]*\([A-Z][A-Z_0-9]*\)[[:space:]]*=[[:space:]]*_\(IO\|IOW\|IOR\|IOWR\|IOC\)[[:space:]]*(/#define \1 _\2(/
 				s/^\(#define .*)\),$/\1/p
 				s/^\(#define .*,\)$/\1 \\/p
 				s/^\([[:space:]]\+[^),]\+)\),$/\1/p' >> "$tmpdir/$f"

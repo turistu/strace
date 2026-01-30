@@ -101,7 +101,7 @@ test_no_device(void)
 	long rc;
 
 	/* unrecognized */
-	static const uint8_t unk_nums[] = { 0, 21, 22, 255 };
+	static const uint8_t unk_nums[] = { 0, 23, 24, 255 };
 
 	for (const uint8_t *p = unk_nums; p < ARRAY_END(unk_nums); p++) {
 		for (uint16_t sz = 0; sz < 1280; sz += 8) {
@@ -471,10 +471,11 @@ test_no_device(void)
 		}
 	}
 
-	/* PTP_SYS_OFFSET_PRECISE{,2} */
+	/* PTP_SYS_OFFSET_PRECISE{,2,_CYCLES} */
 	static const struct strval32 ioc_soprec[] = {
 		{ ARG_STR(PTP_SYS_OFFSET_PRECISE) },
 		{ ARG_STR(PTP_SYS_OFFSET_PRECISE2) },
+		{ ARG_STR(PTP_SYS_OFFSET_PRECISE_CYCLES) },
 	};
 	static const struct ptp_clock_time ts_vecs[] = {
 		{ 0, 123456789 },
@@ -551,10 +552,11 @@ test_no_device(void)
 		}
 	}
 
-	/* PTP_SYS_OFFSET_EXTENDED{,2} */
+	/* PTP_SYS_OFFSET_EXTENDED{,2,_CYCLES} */
 	static const struct strval32 ioc_soext[] = {
 		{ ARG_STR(PTP_SYS_OFFSET_EXTENDED) },
 		{ ARG_STR(PTP_SYS_OFFSET_EXTENDED2) },
+		{ ARG_STR(PTP_SYS_OFFSET_EXTENDED_CYCLES) },
 	};
 	static const struct strval32 clock_names[] = {
 		{ ARG_STR(CLOCK_REALTIME) },
