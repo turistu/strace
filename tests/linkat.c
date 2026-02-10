@@ -1,7 +1,7 @@
 /*
  * Check decoding of linkat syscall.
  *
- * Copyright (c) 2016-2024 The strace developers.
+ * Copyright (c) 2016-2026 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -143,16 +143,16 @@ main(void)
 # ifdef PRINT_SECONTEXT_FULL
 	/* The mismatch should be detected */
 	if (*sample_1_secontext && strstr(sample_1_secontext, "!!") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    sample_1_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   sample_1_secontext);
 	if (*sample_1_secontext && strstr(sample_1_secontext, "system_u") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    sample_1_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   sample_1_secontext);
 # else
 	/* The mismatch cannot be detected since it's on user part */
 	if (*sample_1_secontext && strstr(sample_1_secontext, "!!") != NULL)
-		perror_msg_and_fail("Context mismatch detected: %s",
-				    sample_1_secontext);
+		error_msg_and_fail("Context mismatch detected: %s",
+				   sample_1_secontext);
 # endif
 
 	free(sample_1_secontext);
@@ -166,11 +166,11 @@ main(void)
 
 #ifdef PRINT_SECONTEXT_MISMATCH
 	if (*sample_1_secontext && strstr(sample_1_secontext, "!!") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    sample_1_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   sample_1_secontext);
 	if (*sample_1_secontext && strstr(sample_1_secontext, "default_t") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    sample_1_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   sample_1_secontext);
 #endif
 
 	rc = syscall(__NR_linkat, -100, sample_1, -100, sample_2, 0);
@@ -190,6 +190,8 @@ main(void)
 	int dfd_old = get_dir_fd(".");
 	char *cwd = get_fd_path(dfd_old);
 
+	if (*sample_1_secontext)
+		(void) reset_secontext_file(".");
 	errno = 0;
 	mangle_secontext_field(".", SECONTEXT_TYPE, "default_t",
 						    "user_home_t");
@@ -197,11 +199,11 @@ main(void)
 
 #ifdef PRINT_SECONTEXT_MISMATCH
 	if (*dfd_old_secontext && strstr(dfd_old_secontext, "!!") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    dfd_old_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   dfd_old_secontext);
 	if (*dfd_old_secontext && strstr(dfd_old_secontext, "default_t") == NULL)
-		perror_msg_and_fail("Context mismatch not detected: %s",
-				    dfd_old_secontext);
+		error_msg_and_fail("Context mismatch not detected: %s",
+				   dfd_old_secontext);
 #endif
 
 	rc = syscall(__NR_linkat, dfd_old, sample_1, -100, sample_2, 0);

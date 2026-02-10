@@ -4,7 +4,7 @@
  *
  * kvmtest.c author: Josh Triplett <josh@joshtriplett.org>
  * Copyright (c) 2015 Intel Corporation
- * Copyright (c) 2017-2025 The strace developers.
+ * Copyright (c) 2017-2026 The strace developers.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -97,11 +97,11 @@ __asm__(
 	"code_size:			\n"
 	"	.short . - code		\n"
 	".size code_size, . - code_size	\n"
-#ifdef __x86_64__
+# ifdef __x86_64__
 	".code64			\n"
-#else
+# else
 	".code32			\n"
-#endif
+# endif
 	);
 
 static void

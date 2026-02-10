@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Copyright (c) 2011-2016 Dmitry V. Levin <ldv@strace.io>
-# Copyright (c) 2011-2025 The strace developers.
+# Copyright (c) 2011-2026 The strace developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
@@ -12,6 +12,12 @@ LOG="log"
 OUT="out"
 EXP="exp"
 CONFIG_H="../../src/config.h"
+
+# Starting with glibc 2.43, support for 2MB transparent huge pages
+# has been enabled by default in malloc on AArch64.
+# Disable it to avoid unexpected madvise() and close() invocations
+# that break tests.
+GLIBC_TUNABLES=glibc.malloc.hugetlb=0; export GLIBC_TUNABLES
 
 warn_() { printf >&2 '%s\n' "$*"; }
 fail_() { warn_ "$ME_: failed test: $*"; exit 1; }

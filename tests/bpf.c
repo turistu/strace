@@ -2,7 +2,7 @@
  * Check bpf syscall decoding.
  *
  * Copyright (c) 2015-2017 Dmitry V. Levin <ldv@strace.io>
- * Copyright (c) 2015-2025 The strace developers.
+ * Copyright (c) 2015-2026 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
@@ -1795,6 +1795,18 @@ init_BPF_BTF_LOAD_attr(struct bpf_attr_check *check, size_t idx)
 	attr->btf = (uintptr_t) btf_data;
 }
 
+static void
+print_BPF_BTF_LOAD_attr2(const struct bpf_attr_check *check,
+			 unsigned long addr, size_t idx)
+{
+	const struct BPF_BTF_LOAD_struct *attr =
+		&((union bpf_attr_data *) (uintptr_t) addr)->BPF_BTF_LOAD_data;
+
+	printf("btf=NULL, btf_log_buf=NULL, btf_size=0, btf_log_size=0"
+	       ", btf_log_level=0, btf_log_true_size=%u",
+	       attr->btf_log_true_size);
+}
+
 static struct bpf_attr_check BPF_BTF_LOAD_checks[] = {
 	{
 		.data = { .BPF_BTF_LOAD_data = { .btf = 0 } },
@@ -1822,8 +1834,7 @@ static struct bpf_attr_check BPF_BTF_LOAD_checks[] = {
 			.btf_log_true_size = 0xfacefeed
 		} },
 		.size = offsetofend(struct BPF_BTF_LOAD_struct, btf_log_true_size),
-		.str = "btf=NULL, btf_log_buf=NULL, btf_size=0, btf_log_size=0"
-		       ", btf_log_level=0, btf_log_true_size=4207869677"
+		.print_fn = print_BPF_BTF_LOAD_attr2
 	},
 	{ /* 3 */
 		.data = { .BPF_BTF_LOAD_data = {
