@@ -13,8 +13,61 @@
 #include <sched.h>
 #include <linux/sched/types.h>
 
+#include "xstring.h"
 #include "xlat/schedulers.h"
 #include "xlat/sched_flags.h"
+
+/**
+ * Returns a string (pointing to a statically allocated buffer) if the policy
+ * can be decoded, and NULL otherwise.
+ */
+static const char *
+sprint_policy(const kernel_long_t policy)
+{
+	static char buf[sizeof("SCHED_RESET_ON_FORK|SCHED_DEADLINE")];
+	const char *policy_str;
+
+	if (policy < 0)
+		return NULL;
+
+	policy_str = xlookup(schedulers, policy & ~SCHED_RESET_ON_FORK);
+
+	if (policy & SCHED_RESET_ON_FORK) {
+		if (policy_str != NULL) {
+			xsprintf(buf, "SCHED_RESET_ON_FORK|%s", policy_str);
+		} else {
+			xsprintf(buf, "SCHED_RESET_ON_FORK|%#" PRI_klx,
+				 policy & ~SCHED_RESET_ON_FORK);
+		}
+
+		return buf;
+	}
+
+	return policy_str;
+}
+
+static void
+print_policy(const int policy)
+{
+	const char *policy_str = sprint_policy(policy);
+
+	print_xlat_ex((unsigned int) policy,
+		      policy_str ?: "SCHED_???",
+		      policy_str ? XLAT_STYLE_DEFAULT : PXF_DEFAULT_STR);
+}
+
+static void
+print_sched_param(struct tcb * const tcp, const kernel_ulong_t addr)
+{
+	struct sched_param param;
+
+	if (umove_or_printaddr(tcp, addr, &param))
+		return;
+
+	tprint_struct_begin();
+	PRINT_FIELD_D(param, sched_priority);
+	tprint_struct_end();
+}
 
 SYS_FUNC(sched_getscheduler)
 {
@@ -23,8 +76,8 @@ SYS_FUNC(sched_getscheduler)
 		tprints_arg_name("pid");
 		printpid(tcp, tcp->u_arg[0], PT_TGID);
 	} else if (!syserror(tcp)) {
-		tcp->auxstr = xlookup(schedulers, (kernel_ulong_t) tcp->u_rval);
-		return RVAL_STR;
+		tcp->auxstr = sprint_policy(tcp->u_rval);
+		return RVAL_HEX | RVAL_STR;
 	}
 	return 0;
 }
@@ -37,11 +90,11 @@ SYS_FUNC(sched_setscheduler)
 
 	/* policy */
 	tprints_arg_next_name("policy");
-	printxval(schedulers, tcp->u_arg[1], "SCHED_???");
+	print_policy(tcp->u_arg[1]);
 
 	/* param */
 	tprints_arg_next_name("param");
-	printnum_int(tcp, tcp->u_arg[2], "%d");
+	print_sched_param(tcp, tcp->u_arg[2]);
 
 	return RVAL_DECODED;
 }
@@ -55,7 +108,7 @@ SYS_FUNC(sched_getparam)
 	} else {
 		/* param */
 		tprints_arg_next_name("param");
-		printnum_int(tcp, tcp->u_arg[1], "%d");
+		print_sched_param(tcp, tcp->u_arg[1]);
 	}
 	return 0;
 }
@@ -68,7 +121,7 @@ SYS_FUNC(sched_setparam)
 
 	/* param */
 	tprints_arg_next_name("param");
-	printnum_int(tcp, tcp->u_arg[1], "%d");
+	print_sched_param(tcp, tcp->u_arg[1]);
 
 	return RVAL_DECODED;
 }
