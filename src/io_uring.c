@@ -1254,11 +1254,8 @@ print_io_uring_zcrx_ifq_reg(struct tcb *tcp, const kernel_ulong_t addr)
 	print_io_uring_zcrx_offsets(tcp, &arg.offsets);
 	tprint_struct_next();
 	PRINT_FIELD_U(arg, zcrx_id);
-
-	if (arg.__resv2) {
-		tprint_struct_next();
-		PRINT_FIELD_X(arg, __resv2);
-	}
+	tprint_struct_next();
+	PRINT_FIELD_U(arg, rx_buf_len);
 
 	if (!IS_ARRAY_ZERO(arg.__resv)) {
 		tprint_struct_next();
@@ -1541,14 +1538,11 @@ print_io_uring_query_zcrx(struct tcb *tcp, const kernel_ulong_t addr)
 	tprint_struct_next();
 	PRINT_FIELD_U(zcrx, nr_ctrl_opcodes);
 	tprint_struct_next();
+	PRINT_FIELD_X(zcrx, features);
+	tprint_struct_next();
 	PRINT_FIELD_U(zcrx, rq_hdr_size);
 	tprint_struct_next();
 	PRINT_FIELD_U(zcrx, rq_hdr_alignment);
-
-	if (zcrx.__resv1) {
-		tprint_struct_next();
-		PRINT_FIELD_X(zcrx, __resv1);
-	}
 
 	if (zcrx.__resv2) {
 		tprint_struct_next();

@@ -72,106 +72,19 @@ struct sockaddr_ieee802154 {
 };
 /* End of include/net/af_ieee802154.h copy-paste */
 
-#ifdef HAVE_LINUX_IF_ALG_H
-# include <linux/if_alg.h>
-#else
-struct sockaddr_alg {
-	uint16_t salg_family;
-	uint8_t salg_type[14];
-	uint32_t salg_feat;
-	uint32_t salg_mask;
-	uint8_t salg_name[64];
-};
-#endif
-
+#include <linux/if_alg.h>
 #ifndef CRYPTO_ALG_KERN_DRIVER_ONLY
 # define CRYPTO_ALG_KERN_DRIVER_ONLY 0x1000
 #endif
 
-#ifndef HAVE_STRUCT_SOCKADDR_ALG_NEW
-struct sockaddr_alg_new {
-	uint16_t salg_family;
-	uint8_t salg_type[14];
-	uint32_t salg_feat;
-	uint32_t salg_mask;
-	uint8_t salg_name[];
-};
-#endif
+#include <linux/nfc.h>
+#include <linux/vm_sockets.h>
+#define SVM_FLAGS		svm_flags
+#define SVM_ZERO		svm_zero
+#define SVM_ZERO_FIRST	svm_zero[0]
 
-#ifdef HAVE_LINUX_NFC_H
-# include <linux/nfc.h>
-#else
-struct sockaddr_nfc {
-	uint16_t sa_family;
-	uint32_t dev_idx;
-	uint32_t target_idx;
-	uint32_t nfc_protocol;
-};
-
-# define NFC_LLCP_MAX_SERVICE_NAME 63
-struct sockaddr_nfc_llcp {
-	uint16_t sa_family;
-	uint32_t dev_idx;
-	uint32_t target_idx;
-	uint32_t nfc_protocol;
-	uint8_t dsap;
-	uint8_t ssap;
-	char service_name[NFC_LLCP_MAX_SERVICE_NAME];
-	size_t service_name_len;
-};
-#endif
-
-#ifdef HAVE_LINUX_VM_SOCKETS_H
-# include <linux/vm_sockets.h>
-#endif
-
-#ifdef HAVE_STRUCT_SOCKADDR_VM
-# ifdef HAVE_STRUCT_SOCKADDR_VM_SVM_FLAGS
-#  define SVM_FLAGS		svm_flags
-#  define SVM_ZERO		svm_zero
-#  define SVM_ZERO_FIRST	svm_zero[0]
-# else
-#  define SVM_FLAGS		svm_zero[0]
-#  define SVM_ZERO		svm_zero + 1
-#  define SVM_ZERO_FIRST	svm_zero[1]
-# endif
-#else
-struct sockaddr_vm {
-	uint16_t  svm_family;
-	uint16_t svm_reserved1;
-	uint32_t svm_port;
-	uint32_t svm_cid;
-	uint8_t svm_flags;
-	uint8_t svm_zero[sizeof(struct sockaddr) - 13];
-};
-# define SVM_FLAGS	svm_flags
-# define SVM_ZERO	svm_zero
-# define SVM_ZERO_FIRST	svm_zero[0]
-#endif
-
-#ifdef HAVE_LINUX_QRTR_H
-# include <linux/qrtr.h>
-#else
-struct sockaddr_qrtr {
-	uint16_t sq_family;
-	uint32_t sq_node;
-	uint32_t sq_port;
-};
-#endif
-
-#ifdef HAVE_LINUX_IF_XDP_H
-# include <linux/if_xdp.h>
-#endif
-
-#ifndef HAVE_STRUCT_SOCKADDR_XDP
-struct sockaddr_xdp {
-	uint16_t sxdp_family;
-	uint16_t sxdp_flags;
-	uint32_t sxdp_ifindex;
-	uint32_t sxdp_queue_id;
-	uint32_t sxdp_shared_umem_fd;
-};
-#endif
+#include <linux/qrtr.h>
+#include <linux/if_xdp.h>
 
 #include "xlat.h"
 #include "xlat/addrfams.h"

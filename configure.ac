@@ -443,10 +443,6 @@ AC_CHECK_HEADERS(m4_normalize([
 	elf.h
 	gcov.h
 	iconv.h
-	linux/if_alg.h
-	linux/if_xdp.h
-	linux/nfc.h
-	linux/qrtr.h
 	linux/rxrpc.h
 	mqueue.h
 	netinet/sctp.h
@@ -481,12 +477,6 @@ AC_CHECK_HEADERS(m4_normalize([
 	linux/kvm.h
 ]),,, [AC_INCLUDES_DEFAULT
 #include <linux/types.h>
-])
-
-AC_CHECK_HEADERS(m4_normalize([
-	linux/vm_sockets.h
-]),,, [AC_INCLUDES_DEFAULT
-#include <sys/socket.h>
 ])
 
 AC_CHECK_HEADERS([asm/sigcontext.h],,, [#include <signal.h>])
@@ -559,26 +549,8 @@ AC_CHECK_MEMBERS(m4_normalize([
 ]),,, [#include <linux/kvm.h>])
 
 AC_CHECK_TYPES(m4_normalize([
-	struct sockaddr_alg_new
-]),,, [#include <netinet/in.h>
-#include <linux/if_alg.h>])
-
-AC_CHECK_TYPES(m4_normalize([
-	struct sockaddr_xdp
-]),,, [#include <netinet/in.h>
-#include <linux/if_xdp.h>])
-
-AC_CHECK_TYPES(m4_normalize([
 	struct tcp_diag_md5sig
 ]),,, [#include <netinet/tcp.h>])
-
-AC_CHECK_TYPES(m4_normalize([struct sockaddr_vm]),[
-	AC_CHECK_MEMBERS(m4_normalize([
-		struct sockaddr_vm.svm_flags
-	]),,, [#include <netinet/in.h>
-#include <linux/vm_sockets.h>])
-],, [#include <netinet/in.h>
-#include <linux/vm_sockets.h>])
 
 saved_CPPFLAGS="$CPPFLAGS"
 
