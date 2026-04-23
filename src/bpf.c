@@ -296,6 +296,15 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_CREATE)
 }
 END_BPF_CMD_DECODER(RVAL_DECODED | RVAL_FD)
 
+static void
+print_bpf_map_xxx_flags(const uint64_t flags, const struct xlat *const xlat)
+{
+	if (flags)
+		printflags64(xlat, flags, "BPF_???");
+	else
+		printxval64(xlat, flags, "BPF_???");
+}
+
 BEGIN_BPF_CMD_DECODER(BPF_MAP_LOOKUP_ELEM)
 {
 	tprint_struct_begin();
@@ -308,7 +317,8 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_LOOKUP_ELEM)
 	if (len <= offsetof(struct BPF_MAP_LOOKUP_ELEM_struct, flags))
 		break;
 	tprint_struct_next();
-	PRINT_FIELD_FLAGS(attr, flags, bpf_map_lookup_elem_flags, "BPF_???");
+	PRINT_FIELD_OBJ_VAL(attr, flags, print_bpf_map_xxx_flags,
+			    bpf_map_lookup_elem_flags);
 }
 END_BPF_CMD_DECODER(RVAL_DECODED)
 
@@ -323,7 +333,8 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_UPDATE_ELEM)
 	tprint_struct_next();
 	PRINT_FIELD_ADDR64(attr, value);
 	tprint_struct_next();
-	PRINT_FIELD_XVAL(attr, flags, bpf_map_update_elem_flags, "BPF_???");
+	PRINT_FIELD_OBJ_VAL(attr, flags, print_bpf_map_xxx_flags,
+			    bpf_map_update_elem_flags);
 }
 END_BPF_CMD_DECODER(RVAL_DECODED)
 
@@ -1560,8 +1571,9 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_LOOKUP_BATCH)
 		tprint_struct_next();
 		PRINT_FIELD_FD(attr, map_fd, tcp);
 		tprint_struct_next();
-		PRINT_FIELD_FLAGS(attr, elem_flags,
-				  bpf_map_lookup_elem_flags, "BPF_???");
+		PRINT_FIELD_OBJ_VAL(attr, elem_flags,
+				    print_bpf_map_xxx_flags,
+				    bpf_map_lookup_elem_flags);
 		tprint_struct_next();
 		PRINT_FIELD_X(attr, flags);
 
@@ -1602,8 +1614,9 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_UPDATE_BATCH)
 		tprint_struct_next();
 		PRINT_FIELD_FD(attr, map_fd, tcp);
 		tprint_struct_next();
-		PRINT_FIELD_FLAGS(attr, elem_flags,
-				  bpf_map_lookup_elem_flags, "BPF_???");
+		PRINT_FIELD_OBJ_VAL(attr, elem_flags,
+				    print_bpf_map_xxx_flags,
+				    bpf_map_update_elem_flags);
 		tprint_struct_next();
 		PRINT_FIELD_X(attr, flags);
 
@@ -1640,8 +1653,9 @@ BEGIN_BPF_CMD_DECODER(BPF_MAP_DELETE_BATCH)
 		tprint_struct_next();
 		PRINT_FIELD_FD(attr, map_fd, tcp);
 		tprint_struct_next();
-		PRINT_FIELD_FLAGS(attr, elem_flags,
-				  bpf_map_lookup_elem_flags, "BPF_???");
+		PRINT_FIELD_OBJ_VAL(attr, elem_flags,
+				    print_bpf_map_xxx_flags,
+				    bpf_map_lookup_elem_flags);
 		tprint_struct_next();
 		PRINT_FIELD_X(attr, flags);
 
@@ -1809,9 +1823,13 @@ BEGIN_BPF_CMD_DECODER(BPF_LINK_CREATE)
 	/* TODO: prog type == BPF_PROG_TYPE_TRACING */
 	case BPF_TRACE_FENTRY:
 	case BPF_TRACE_FEXIT:
+	case BPF_TRACE_FSESSION:
 	case BPF_MODIFY_RETURN:
 	case BPF_LSM_MAC:
-		/* Introduced in Linux commit v5.19-rc1~159^2~4^2~37^2~2 */
+		/*
+		 * Introduced in Linux commit v5.19-rc1~159^2~4^2~37^2~2 .
+		 * BPF_TRACE_FSESSION in Linux commit v7.0-rc1~196^2~34^2~12 .
+		 */
 		tprint_struct_next();
 		tprints_field_name("tracing");
 		tprint_struct_begin();
@@ -2088,6 +2106,31 @@ BEGIN_BPF_CMD_DECODER(BPF_PROG_STREAM_READ_BY_FD)
 }
 END_BPF_CMD_DECODER(RVAL_DECODED)
 
+static void
+print_prog_assoc_struct_ops(struct tcb *const tcp,
+			    const struct bpf_prog_assoc_struct_ops *const assoc)
+{
+	tprint_struct_begin();
+	PRINT_FIELD_FD(*assoc, map_fd, tcp);
+	tprint_struct_next();
+	PRINT_FIELD_FD(*assoc, prog_fd, tcp);
+	tprint_struct_next();
+	PRINT_FIELD_X(*assoc, flags);
+	tprint_struct_end();
+}
+
+BEGIN_BPF_CMD_DECODER(BPF_PROG_ASSOC_STRUCT_OPS)
+{
+	/*
+	 * The prog_assoc_struct_ops structure and BPF_PROG_ASSOC_STRUCT_OPS
+	 * command were introduced by Linux commit v7.0-rc1~196^2~109^2~4.
+	 */
+	tprint_struct_begin();
+	PRINT_FIELD_OBJ_TCB_PTR(attr, prog_assoc_struct_ops, tcp,
+				print_prog_assoc_struct_ops);
+}
+END_BPF_CMD_DECODER(RVAL_DECODED)
+
 SYS_FUNC(bpf)
 {
 	static const bpf_cmd_decoder_t bpf_cmd_decoders[] = {
@@ -2129,6 +2172,7 @@ SYS_FUNC(bpf)
 		BPF_CMD_ENTRY(BPF_PROG_BIND_MAP),
 		BPF_CMD_ENTRY(BPF_TOKEN_CREATE),
 		BPF_CMD_ENTRY(BPF_PROG_STREAM_READ_BY_FD),
+		BPF_CMD_ENTRY(BPF_PROG_ASSOC_STRUCT_OPS),
 	};
 
 	const unsigned int cmd = tcp->u_arg[0];
