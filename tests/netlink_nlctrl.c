@@ -685,15 +685,15 @@ test_nla_ops_family(const int fd)
 
 	static const struct strval32 netdev_cmds[] = {
 		{ ARG_STR(NETDEV_CMD_DEV_GET) },
-		{ ARG_STR(NETDEV_CMD_BIND_TX) },
-		{ NETDEV_CMD_BIND_TX + 1, "NETDEV_CMD_???" },
+		{ ARG_STR(NETDEV_CMD_QUEUE_CREATE) },
+		{ NETDEV_CMD_QUEUE_CREATE + 1, "NETDEV_CMD_???" },
 	};
 	TEST_NLA_OPS_FAMILY(NETDEV_FAMILY_NAME, netdev_cmds);
 
 	static const struct strval32 nl80211_cmds[] = {
 		{ ARG_STR(NL80211_CMD_GET_WIPHY) },
-		{ ARG_STR(NL80211_CMD_NAN_CLUSTER_JOINED) },
-		{ NL80211_CMD_NAN_CLUSTER_JOINED + 1, "NL80211_CMD_???" },
+		{ ARG_STR(NL80211_CMD_NAN_CHANNEL_EVAC) },
+		{ NL80211_CMD_NAN_CHANNEL_EVAC + 1, "NL80211_CMD_???" },
 	};
 	TEST_NLA_OPS_FAMILY(NL80211_GENL_NAME, nl80211_cmds);
 
