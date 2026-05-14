@@ -437,6 +437,12 @@ ioctl_nsfs	+ioctl.test -esignal=none
 ioctl_nsfs-ns_get_pid	+ioctl.test -a33
 ioctl_nsfs-ns_get_pid--pidns-translation	test_pidns -etrace=ioctl -a25 "QUIRK:START-OF-TEST-OUTPUT:ioctl(-1, NS_GET_USERNS)"
 ioctl_nsfs-ns_mnt_get	+ioctl.test
+ioctl_pidfd_get_info	+ioctl.test
+ioctl_pidfd_get_info-success	+ioctl-success.sh -a32
+ioctl_pidfd_get_info-success-Xabbrev	+ioctl-success.sh -a32 -Xabbrev
+ioctl_pidfd_get_info-success-Xraw	+ioctl-success.sh -a24 -Xraw
+ioctl_pidfd_get_info-success-Xverbose	+ioctl-success.sh -a49 -Xverbose
+ioctl_pidfd_namespace	+ioctl.test
 ioctl_perf	+ioctl.test
 ioctl_perf-success +ioctl-success.sh -a35
 ioctl_ptp			+ioctl.test -a29

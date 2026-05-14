@@ -144,6 +144,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	count-f \
 	delay \
 	detach-vfork \
+	env-i \
 	execve-v \
 	execveat-v \
 	fcntl--pidns-translation \
@@ -228,6 +229,10 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	ioctl_nsfs-ns_get_pid \
 	ioctl_nsfs-ns_get_pid--pidns-translation \
 	ioctl_perf-success \
+	ioctl_pidfd_get_info-success \
+	ioctl_pidfd_get_info-success-Xabbrev \
+	ioctl_pidfd_get_info-success-Xraw \
+	ioctl_pidfd_get_info-success-Xverbose \
 	ioctl_ptp-success \
 	ioctl_ptp-success-Xabbrev \
 	ioctl_ptp-success-Xraw \

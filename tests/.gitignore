@@ -120,6 +120,7 @@ dup3
 dup3-P
 dup3-y
 dup3-yy
+env-i
 epoll_create
 epoll_create1
 epoll_ctl
@@ -416,6 +417,12 @@ ioctl_nsfs
 ioctl_nsfs-ns_get_pid
 ioctl_nsfs-ns_get_pid--pidns-translation
 ioctl_nsfs-ns_mnt_get
+ioctl_pidfd_get_info
+ioctl_pidfd_get_info-success
+ioctl_pidfd_get_info-success-Xabbrev
+ioctl_pidfd_get_info-success-Xraw
+ioctl_pidfd_get_info-success-Xverbose
+ioctl_pidfd_namespace
 ioctl_perf
 ioctl_perf-success
 ioctl_ptp

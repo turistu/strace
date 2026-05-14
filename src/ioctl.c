@@ -489,6 +489,8 @@ ioctl_decode(struct tcb *tcp, const struct finfo *finfo)
 		return nsfs_ioctl(tcp, code, arg);
 	case 0xfd:
 		return dm_ioctl(tcp, code, arg);
+	case 0xff:
+		return pidfd_ioctl(tcp, code, arg);
 	default:
 		return ioctl_decode_unknown_type(tcp, code, arg);
 	}

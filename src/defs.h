@@ -1360,6 +1360,7 @@ print_sigset_addr(struct tcb *, kernel_ulong_t addr);
 
 extern const char *sprintsigmask_n(const char *, const void *, unsigned int);
 extern void printsignal(int);
+extern void print_wait_status(int);
 
 extern void
 tprint_iov_upto(struct tcb *, kernel_ulong_t len, kernel_ulong_t addr,
@@ -1475,6 +1476,7 @@ DECL_IOCTL(kvm);
 DECL_IOCTL(lirc);
 DECL_IOCTL(nbd);
 DECL_IOCTL(nsfs);
+DECL_IOCTL(pidfd);
 DECL_IOCTL(ptp);
 DECL_IOCTL(random);
 DECL_IOCTL(seccomp);

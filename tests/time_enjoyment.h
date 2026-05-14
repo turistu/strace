@@ -24,12 +24,14 @@ static inline void
 enjoy_time(uint64_t cputime_limit)
 {
 	struct timespec ts = { 0 };
+	uint64_t nsecs0 =
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts) ? 0 : nsecs(&ts);
 	volatile int dummy = 0;
 
 	/* Enjoying my user time */
 	for (size_t i = 0; i < NUM_USER_ITERS_SQRT; ++i) {
 		if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts) == 0) {
-			if (nsecs(&ts) >= cputime_limit)
+			if (nsecs(&ts) - nsecs0 >= cputime_limit)
 				break;
 		}
 
@@ -58,7 +60,7 @@ enjoy_time(uint64_t cputime_limit)
 				continue;
 		}
 
-		if (nsecs(&ts) >= cputime_limit * 3)
+		if (nsecs(&ts) - nsecs0 >= cputime_limit * 3)
 			break;
 
 		sched_yield();

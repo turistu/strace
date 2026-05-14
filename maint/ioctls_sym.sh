@@ -462,11 +462,20 @@ process_file()
 	# Soft post-preprocess workarounds.  Fragile.
 	case "$f" in
 		*linux/btrfs.h)
-			sed -i '/[[:space:]]BTRFS_IOC_[GS]ET_FSLABEL[[:space:]]/d' \
+			sed -E -i '/[[:space:]]BTRFS_IOC_([GS]ET_FSLABEL|SHUTDOWN)[[:space:]]/d' \
+				"$tmpdir"/header.out
+			;;
+		*linux/exfat.h)
+			sed -i "/[[:space:]]EXFAT_IOC_SHUTDOWN[[:space:]]/d" \
 				"$tmpdir"/header.out
 			;;
 		*linux/ext4.h)
-			sed -i "/[[:space:]]EXT4_IOC32_GROUP_ADD[[:space:]]/d" "$tmpdir"/header.out
+			sed -E -i "/[[:space:]]EXT4_IOC(32_GROUP_ADD|_SHUTDOWN)[[:space:]]/d" \
+				"$tmpdir"/header.out
+			;;
+		*linux/f2fs.h)
+			sed -i "/[[:space:]]F2FS_IOC_SHUTDOWN[[:space:]]/d" \
+				"$tmpdir"/header.out
 			;;
 		*linux/kvm.h)
 			arm_list='KVM_ARM_[A-Z_]+'

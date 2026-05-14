@@ -16,6 +16,7 @@
 #include "xstring.h"
 #include "xlat/schedulers.h"
 #include "xlat/sched_flags.h"
+#include "xlat/sched_getattr_flags.h"
 
 /**
  * Returns a string (pointing to a statically allocated buffer) if the policy
@@ -267,7 +268,7 @@ SYS_FUNC(sched_setattr)
 
 		/* flags */
 		tprints_arg_next_name("flags");
-		PRINT_VAL_U((unsigned int) tcp->u_arg[2]);
+		PRINT_VAL_X((unsigned int) tcp->u_arg[2]);
 	}
 
 	return 0;
@@ -311,7 +312,8 @@ SYS_FUNC(sched_getattr)
 
 		/* flags */
 		tprints_arg_next_name("flags");
-		PRINT_VAL_U((unsigned int) tcp->u_arg[3]);
+		printflags(sched_getattr_flags, tcp->u_arg[3],
+			   "SCHED_GETATTR_FLAG_???");
 	}
 
 	return 0;

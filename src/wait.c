@@ -21,11 +21,9 @@
 #include "xlat/wait4_options.h"
 #include "xlat/ptrace_events.h"
 
-static int
-printstatus(int status)
+void
+print_wait_status(int status)
 {
-	int exited = 0;
-
 	/*
 	 * Here is a tricky presentation problem.  This solution
 	 * is still not entirely satisfactory but since there
@@ -47,7 +45,6 @@ printstatus(int status)
 	} else if (WIFEXITED(status)) {
 		tprintf_string("{WIFEXITED(s) && WEXITSTATUS(s) == %d}",
 			       WEXITSTATUS(status));
-		exited = 1;
 		status &= ~W_EXITCODE(WEXITSTATUS(status), 0);
 	}
 #ifdef WIFCONTINUED
@@ -60,7 +57,7 @@ printstatus(int status)
 		PRINT_VAL_X(status);
 		tprint_flags_end();
 		tprint_indirect_end();
-		return 0;
+		return;
 	}
 
 	if (status) {
@@ -81,8 +78,6 @@ printstatus(int status)
 	}
 	tprint_flags_end();
 	tprint_indirect_end();
-
-	return exited;
 }
 
 static int
@@ -101,7 +96,7 @@ printwaitn(struct tcb *const tcp,
 		if (tcp->u_rval == 0)
 			printaddr(tcp->u_arg[1]);
 		else if (!umove_or_printaddr(tcp, tcp->u_arg[1], &status))
-			printstatus(status);
+			print_wait_status(status);
 
 		/* options */
 		tprints_arg_next_name("options");

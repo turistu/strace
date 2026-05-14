@@ -829,6 +829,12 @@ tprint_sysret_end(void)
 		printpid((tcp_), (where_).field_, PT_TGID);		\
 	} while (0)
 
+# define PRINT_FIELD_TID(where_, field_, tcp_)				\
+	do {								\
+		tprints_field_name(#field_);				\
+		printpid((tcp_), (where_).field_, PT_TID);		\
+	} while (0)
+
 # define PRINT_FIELD_SYSCALL_NAME(where_, field_, audit_arch_)		\
 	do {								\
 		tprints_field_name(#field_);				\

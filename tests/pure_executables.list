@@ -287,6 +287,8 @@ ioctl_loop
 ioctl_mtd
 ioctl_nbd
 ioctl_nsfs-ns_mnt_get
+ioctl_pidfd_get_info
+ioctl_pidfd_namespace
 ioctl_perf
 ioctl_ptp
 ioctl_ptp-Xabbrev

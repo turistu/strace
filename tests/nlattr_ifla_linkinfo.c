@@ -461,9 +461,9 @@ main(void)
 		{ { 0, "BR_STP_MODE_AUTO" },
 		  BE_LE("\"\\x00\\x00\\x00\"", "\"\\x00\\x00\\x00\"") },
 		{ { 1, "BR_STP_MODE_USER" },
-		  BE_LE("\"\\x00\\x00\\x01\"", "\"\\x01\\x00\\x00\"") },
+		  BE_LE("\"\\x00\\x00\\x00\"", "\"\\x01\\x00\\x00\"") },
 		{ { 2, "BR_STP_MODE_KERNEL" },
-		  BE_LE("\"\\x00\\x00\\x02\"", "\"\\x02\\x00\\x00\"") },
+		  BE_LE("\"\\x00\\x00\\x00\"", "\"\\x02\\x00\\x00\"") },
 		{ { 0xbadc0dedU, "0xbadc0ded /* BR_STP_MODE_??? */" },
 		  BE_LE("\"\\xba\\xdc\\x0d\"", "\"\\xed\\x0d\\xdc\"") },
 	};

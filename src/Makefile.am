@@ -272,6 +272,7 @@ libstrace_a_SOURCES =	\
 	perf_ioctl.c	\
 	personality.c	\
 	pidfd_getfd.c	\
+	pidfd_ioctl.c	\
 	pidfd_open.c	\
 	pidns.c		\
 	pkeys.c		\

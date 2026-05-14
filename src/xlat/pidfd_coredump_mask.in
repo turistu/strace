@@ -1,0 +1,7 @@
+#unconditional
+#From include/uapi/linux/pidfd.h
+#Prefix PIDFD_COREDUMP
+PIDFD_COREDUMPED
+PIDFD_COREDUMP_SKIP
+PIDFD_COREDUMP_USER
+PIDFD_COREDUMP_ROOT
