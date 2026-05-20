@@ -115,19 +115,17 @@ main(int argc, const char *argv[])
 		}
 	}
 
-	static const struct {
-		uint32_t cmd;
-		const char *str;
-	} null_arg_cmds[] = {
+	static const struct strval32 null_arg_cmds[] = {
 		{ ARG_STR(FITRIM) },
 		{ ARG_STR(FS_IOC_FSSETXATTR) },
 		{ ARG_STR(FS_IOC_FSGETXATTR) },
+		{ ARG_STR(FS_IOC_SHUTDOWN) },
 	};
 
 	for (size_t i = 0; i < ARRAY_SIZE(null_arg_cmds); ++i) {
-		do_ioctl(null_arg_cmds[i].cmd, 0);
+		do_ioctl(null_arg_cmds[i].val, 0);
 		printf("ioctl(-1, " XLAT_FMT ", NULL) = %s\n",
-		       XLAT_SEL(null_arg_cmds[i].cmd, null_arg_cmds[i].str),
+		       XLAT_SEL(null_arg_cmds[i].val, null_arg_cmds[i].str),
 		       errstr);
 	}
 
@@ -222,6 +220,37 @@ main(int argc, const char *argv[])
 		       p_fsxattr->fsx_cowextsize,
 		       errstr);
 	}
+
+	/* FS_IOC_SHUTDOWN */
+	TAIL_ALLOC_OBJECT_CONST_PTR(uint32_t, p_shutdown);
+
+	do_ioctl_ptr(FS_IOC_SHUTDOWN, (char *) p_shutdown + 1);
+	printf("ioctl(-1, %s, %p) = %s\n",
+	       XLAT_STR(FS_IOC_SHUTDOWN), (char *) p_shutdown + 1, errstr);
+
+	static const struct strval32 shutdown_flags[] = {
+		{ ARG_STR(FS_SHUTDOWN_FLAGS_DEFAULT) },
+		{ ARG_STR(FS_SHUTDOWN_FLAGS_LOGFLUSH) },
+		{ ARG_STR(FS_SHUTDOWN_FLAGS_NOLOGFLUSH) },
+	};
+
+	for (size_t i = 0; i < ARRAY_SIZE(shutdown_flags); ++i) {
+		*p_shutdown = shutdown_flags[i].val;
+		do_ioctl_ptr(FS_IOC_SHUTDOWN, p_shutdown);
+		printf("ioctl(-1, %s, [" XLAT_FMT "]) = %s\n",
+		       XLAT_STR(FS_IOC_SHUTDOWN),
+		       XLAT_SEL(shutdown_flags[i].val, shutdown_flags[i].str),
+		       errstr);
+	}
+
+#define INVALID_FS_SHUTDOWN_FLAG 0x3
+
+	*p_shutdown = INVALID_FS_SHUTDOWN_FLAG;
+	do_ioctl_ptr(FS_IOC_SHUTDOWN, p_shutdown);
+	printf("ioctl(-1, %s, [%s]) = %s\n",
+	       XLAT_STR(FS_IOC_SHUTDOWN),
+	       XLAT_UNKNOWN(INVALID_FS_SHUTDOWN_FLAG, "FS_SHUTDOWN_FLAGS_???"),
+	       errstr);
 
 	puts("+++ exited with 0 +++");
 	return 0;
