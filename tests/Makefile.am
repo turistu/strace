@@ -456,6 +456,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	strace--syscall-limit-status-summary \
 	strace--syscall-limit-summary \
 	strace-Y-0123456789 \
+	strace-k-z \
 	strace-p-Y-p2 \
 	strace-p1-Y-p \
 	symlink-P \
@@ -561,7 +562,7 @@ include gen_tests.am
 if ENABLE_STACKTRACE
 STACKTRACE_TESTS = strace-k.test strace-k-p.test strace-k-with-depth-limit.test
 if USE_LIBDW
-STACKTRACE_TESTS += strace-kk.test strace-kk-p.test
+STACKTRACE_TESTS += strace-kk.test strace-kk-p.test strace-k-z.test
 endif
 if USE_DEMANGLE
 STACKTRACE_TESTS += strace-k-demangle.test
@@ -779,6 +780,7 @@ check_SCRIPTS = \
 	strace-k-demangle.test \
 	strace-k-p.test \
 	strace-k-with-depth-limit.test \
+	strace-k-z.test \
 	strace-k.test \
 	strace-kk-p.test \
 	strace-kk.test \
@@ -808,7 +810,6 @@ check_DATA = \
 	qual_inject-signal.expected \
 	qualify_personality_empty.in \
 	regex.in \
-	restart_syscall-p.expected \
 	rt_sigaction.awk \
 	sched.in \
 	sigaltstack.expected \
@@ -947,10 +948,7 @@ ksysent.h: $(srcdir)/ksysent.sed
 	mv -f $@.t2 $@
 	rm -f $@.t1
 
-ksysent.$(OBJEXT): ksysent.h
-
-objects = $(filter %.$(OBJEXT),$(SOURCES:.c=.$(OBJEXT)))
-$(objects): scno.h
+$(ksysent_OBJECTS): ksysent.h
 
 clean-local: clean-local-check
 .PHONY: clean-local-check
@@ -963,7 +961,6 @@ check-prerequisites-local: $(check_LIBRARIES) $(check_PROGRAMS)
 .PHONY: check-valgrind-local
 check-valgrind-local: $(check_LIBRARIES) $(check_PROGRAMS)
 
-BUILT_SOURCES = ksysent.h
 CLEANFILES = ksysent.h
 
 include ../src/scno.am
