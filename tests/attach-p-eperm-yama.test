@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# Check hint_yama: scope >= 1 prints a hint; scope = 0 and missing file do not.
+#
+# Copyright (c) 2026 The strace developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+. "${srcdir=.}/init.sh"
+
+helper='../../src/disable_ptrace'
+$helper true > /dev/null 2>&1 ||
+	skip_ "$helper does not work"
+
+sleep "$TIMEOUT_DURATION" &
+victim_pid=$!
+
+check_eperm() {
+	grep -qE \
+		"attach: ptrace\\(PTRACE_(SEIZE|ATTACH), $victim_pid\\): Operation not permitted" \
+		"$LOG"
+}
+
+# Scenario 1: scope file missing => no YAMA hint
+$STRACE -o "$OUT.trace" --signal=none \
+	-P /proc/sys/kernel/yama/ptrace_scope \
+	--trace=/^open --inject=all:error=ENOENT \
+	"$helper" "$STRACE_EXE" -p "$victim_pid" 2>"$LOG"
+check_eperm ||
+	dump_log_and_fail_with "no ptrace_scope: missing EPERM message"
+grep -qF 'yama' "$LOG" &&
+	dump_log_and_fail_with "no ptrace_scope: unexpected YAMA hint"
+
+# Scenario 2: scope = 0 => no YAMA hint
+echo 0 > "$OUT.scope"
+$STRACE -o "$OUT.trace" --signal=none \
+	-P /proc/sys/kernel/yama/ptrace_scope \
+	--trace=/^open --inject=all:retval=0 \
+	"$helper" "$STRACE_EXE" -p "$victim_pid" < "$OUT.scope" 2>"$LOG"
+check_eperm ||
+	dump_log_and_fail_with "ptrace_scope == 0: missing EPERM message"
+grep -qF 'yama' "$LOG" &&
+	dump_log_and_fail_with "ptrace_scope == 0: unexpected YAMA hint"
+
+# Scenario 3: scope > 0 => YAMA hint emitted
+for i in 1 2 3; do
+	echo $i > "$OUT.scope"
+	$STRACE -o "$OUT.trace" --signal=none \
+		-P /proc/sys/kernel/yama/ptrace_scope \
+		--trace=/^open --inject=all:retval=0 \
+		"$helper" "$STRACE_EXE" -p "$victim_pid" < "$OUT.scope" 2>"$LOG"
+	check_eperm ||
+		dump_log_and_fail_with "ptrace_scope == $i: missing EPERM message"
+	grep -qF "$STRACE_EXE: sysctl kernel.yama.ptrace_scope = $i may be restricting this attach" \
+		"$LOG" ||
+		dump_log_and_fail_with "ptrace_scope == $i: missing YAMA hint"
+done
+
+kill "$victim_pid" 2>/dev/null
+wait "$victim_pid" 2>/dev/null
+exit 0

@@ -1399,14 +1399,100 @@ process_opt_p_list(char *opt)
 	}
 }
 
+/* Returns tracer pid if pid is already being traced, 0 if not, -1 on error. */
+static int
+proc_pid_tracer(int pid)
+{
+	char path[sizeof("/proc/%d/status") + sizeof(int) * 3];
+	xsprintf(path, "/proc/%d/status", pid);
+	FILE *fp = fopen(path, "r");
+	if (!fp)
+		return -1;
+	char line[256];
+	int tracer = 0;
+	while (fgets(line, sizeof(line), fp))
+		if (sscanf(line, "TracerPid: %d", &tracer) == 1)
+			break;
+	fclose(fp);
+	return tracer;
+}
+
+/* Returns true if strace holds CAP_SYS_PTRACE. */
+static bool
+has_cap_sys_ptrace(void)
+{
+	static int cached = -1;
+	if (cached >= 0)
+		return cached;
+	FILE *fp = fopen("/proc/self/status", "r");
+	if (!fp)
+		return (cached = 0);
+	char line[256];
+	unsigned long long capeff = 0;
+	while (fgets(line, sizeof(line), fp))
+		if (sscanf(line, "CapEff: %llx", &capeff) == 1)
+			break;
+	fclose(fp);
+	return (cached = (capeff >> 19) & 1); /* CAP_SYS_PTRACE */
+}
+
+/*
+ * If YAMA's ptrace_scope may be blocking the attach, emit a hint.
+ * Scope < 3 only restricts processes without CAP_SYS_PTRACE;
+ * scope 3 blocks all ptrace unconditionally.
+ */
+static void
+hint_yama(void)
+{
+	FILE *fp = fopen("/proc/sys/kernel/yama/ptrace_scope", "r");
+	if (!fp)
+		return;
+	int scope = 0;
+	bool read_ok = fscanf(fp, "%d", &scope) == 1;
+	fclose(fp);
+	if (!read_ok || scope <= 0)
+		return;
+	bool cap = has_cap_sys_ptrace();
+	if (scope < 3 && cap)
+		return;
+	error_msg("sysctl kernel.yama.ptrace_scope = %d"
+		  " may be restricting this attach", scope);
+}
+
+/*
+ * Emit diagnostics that may explain why ptrace attach to pid failed
+ * with EPERM.  Checks for an existing tracer, then signal permission;
+ * if neither applies, defers to hint_yama.
+ */
+static void
+diagnose_attach_eperm(int pid)
+{
+	int tracer_pid = proc_pid_tracer(pid);
+	if (tracer_pid > 0) {
+		error_msg("Process %d is already being traced by pid %d",
+			  pid, tracer_pid);
+		return;
+	}
+
+	if (!has_cap_sys_ptrace() && my_tkill(pid, 0) < 0 && errno == EPERM) {
+		error_msg("process %d may be owned by a different user", pid);
+		return;
+	}
+
+	hint_yama();
+}
+
 static void
 attach_tcb(struct tcb *const tcp)
 {
 	const char *ptrace_attach_cmd;
 
 	if (ptrace_attach_or_seize(tcp->pid, &ptrace_attach_cmd) < 0) {
+		int saved_errno = errno;
 		perror_msg("attach: ptrace(%s, %d)",
 			   ptrace_attach_cmd, tcp->pid);
+		if (saved_errno == EPERM)
+			diagnose_attach_eperm(tcp->pid);
 		droptcb(tcp);
 		return;
 	}

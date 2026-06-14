@@ -445,13 +445,18 @@ Most changes should mention NEWS:
 * NEWS: Mention this change.
 ```
 
-### Co-authored Commits
+### AI Coding Assistants
 
-When working with AI assistants:
+When AI tools contribute to strace development, proper attribution
+helps track the evolving role of AI in the development process.
+Contributions should include an Assisted-by tag in the following format::
 
-```
-Co-authored-by: name@example.com
-```
+  Assisted-by: AGENT_NAME:MODEL_VERSION
+
+Where:
+
+* ``AGENT_NAME`` is the name of the AI tool or framework
+* ``MODEL_VERSION`` is the specific model version used
 
 ## Examples
 

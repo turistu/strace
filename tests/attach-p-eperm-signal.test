@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Check that strace -p reports signal permission denied when the target
+# process cannot be signalled.
+#
+# Copyright (c) 2026 The strace developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+. "${srcdir=.}/init.sh"
+
+kill -0 1 2>/dev/null &&
+	skip_ 'can signal PID 1'
+
+tracer1=$(awk '/^TracerPid:/{print $2; exit}' /proc/1/status 2>/dev/null)
+[ "${tracer1:-0}" = 0 ] ||
+	skip_ 'PID 1 is already being traced'
+
+$STRACE -p 1 2>"$LOG" &&
+	dump_log_and_fail_with "$STRACE -p 1 should have failed"
+
+for cmd in PTRACE_SEIZE PTRACE_ATTACH; do
+	grep -qF "$STRACE_EXE: attach: ptrace($cmd, 1): Operation not permitted" "$LOG" ||
+		continue
+	grep -qF "$STRACE_EXE: process 1 may be owned by a different user" "$LOG" ||
+		continue
+	grep -qF 'yama' "$LOG" &&
+		continue
+	exit 0
+done
+dump_log_and_fail_with "unexpected $STRACE -p 1 output"

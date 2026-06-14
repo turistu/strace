@@ -2,6 +2,7 @@
 /bpf_attr_check.c
 /config.h
 /config.h.in
+/disable_ptrace
 /disable_ptrace_get_syscall_info
 /disable_ptrace_getregset
 /disable_ptrace_set_syscall_info

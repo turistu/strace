@@ -37,8 +37,11 @@ init(int argc, char **argv)
 	}
 }
 
-#if defined DISABLE_PTRACE_REQUEST \
- && defined PR_SET_NO_NEW_PRIVS \
+#ifndef DISABLE_PTRACE_ERRNO
+# define DISABLE_PTRACE_ERRNO EIO
+#endif
+
+#if defined PR_SET_NO_NEW_PRIVS \
  && defined PR_SET_SECCOMP \
  && defined BPF_JUMP \
  && defined BPF_STMT \
@@ -120,9 +123,13 @@ main(int argc, char **argv)
 			 offsetof(struct seccomp_data, args[0])
 			 + (is_bigendian ? sizeof(uint32_t) : 0)),
 		/* jump to "allow" if it is not equal to DISABLE_PTRACE_REQUEST */
+#ifdef DISABLE_PTRACE_REQUEST
 		BPF_JUMP(BPF_JMP | BPF_K | BPF_JEQ, DISABLE_PTRACE_REQUEST, 0, 1),
+#else
+		BPF_STMT(BPF_JMP | BPF_JA, 0),
+#endif
 		/* reject */
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EIO),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | DISABLE_PTRACE_ERRNO),
 		/* allow */
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)
 	};
