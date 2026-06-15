@@ -128,6 +128,11 @@ BuildRequires: pkgconfig(bluez)
 %{?buildrequires_stacktrace}
 %{?buildrequires_selinux}
 
+# rhbz#2461721
+%if 0%{?fedora} >= 45 || 0%{?rhel} >= 11
+Recommends: yama-ptrace-enable
+%endif
+
 # OBS compatibility
 %{?!buildroot:BuildRoot: %_tmppath/buildroot-%name-%version-%release}
 %define maybe_use_defattr %{?suse_version:%%defattr(-,root,root)}

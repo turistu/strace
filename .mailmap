@@ -1,6 +1,7 @@
 # Map git author names and email addresses to canonical/preferred form.
 <Vineet.Gupta1@synopsys.com>	<vgupta@synopsys.com>
 <ak@linux.intel.com>	<ak@suse.de>
+<auto@cursor.ai>	<cursor@cursor.com>
 <damir@altlinux.org>	<damir@altlinux.ru>
 <dgilbert@redhat.com>	<dave@treblig.org>
 <edgar.iglesias@gmail.com>	<edgar@axis.com>
@@ -17,6 +18,7 @@
 <quentin.monnet@netronome.com>	<quentin.monnet@6wind.com>
 <sahilcdq0@gmail.com>	<icegambit91@gmail.com>
 <sahilcdq0@gmail.com>	<sahilcdq@proton.me>
+<sbrabec@suse.com>	<sbrabec@suse.cz>
 <schwab@linux-m68k.org>	<aschwab@redhat.com>
 <schwab@linux-m68k.org>	<schwab@redhat.com>
 <schwab@linux-m68k.org>	<schwab@suse.de>

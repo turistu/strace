@@ -1405,7 +1405,7 @@ proc_pid_tracer(int pid)
 {
 	char path[sizeof("/proc/%d/status") + sizeof(int) * 3];
 	xsprintf(path, "/proc/%d/status", pid);
-	FILE *fp = fopen(path, "r");
+	FILE *fp = fopen_stream(path, "r");
 	if (!fp)
 		return -1;
 	char line[256];
@@ -1424,7 +1424,7 @@ has_cap_sys_ptrace(void)
 	static int cached = -1;
 	if (cached >= 0)
 		return cached;
-	FILE *fp = fopen("/proc/self/status", "r");
+	FILE *fp = fopen_stream("/proc/self/status", "r");
 	if (!fp)
 		return (cached = 0);
 	char line[256];
@@ -1444,7 +1444,7 @@ has_cap_sys_ptrace(void)
 static void
 hint_yama(void)
 {
-	FILE *fp = fopen("/proc/sys/kernel/yama/ptrace_scope", "r");
+	FILE *fp = fopen_stream("/proc/sys/kernel/yama/ptrace_scope", "r");
 	if (!fp)
 		return;
 	int scope = 0;
