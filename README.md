@@ -32,9 +32,15 @@ Please read the file [INSTALL-git](INSTALL-git.md) for installation instructions
 
 Please take a look at [the guide for new contributors](https://strace.io/wiki/NewContributorGuide) if you want to get involved in strace development.
 
-The user discussion and development of strace take place on [the strace mailing list](https://lists.strace.io/mailman/listinfo/strace-devel) -- everyone is welcome to post bug reports, feature requests, comments and patches to strace-devel@lists.strace.io.  The mailing list archives are available at https://lists.strace.io/pipermail/strace-devel/ and other archival sites.
+Development of strace primarily takes place on
+[GitHub](https://github.com/strace/strace) -- everyone is welcome to open
+issues for bug reports and feature requests, submit pull requests, and
+participate in code reviews.
+The [strace mailing list](https://lists.strace.io/mailman/listinfo/strace-devel)
+is also available for discussions and patch submissions, the archives are at
+https://lists.strace.io/pipermail/strace-devel/ and other archival sites.
 
-The GIT repository of strace is available at [GitHub](https://github.com/strace/strace/) and [GitLab](https://gitlab.com/strace/strace/).
+The GIT repository of strace is available at [GitHub](https://github.com/strace/strace/).
 
 Strace packages are available downstream [![in many repositories](https://repology.org/badge/tiny-repos/strace.svg)](https://repology.org/project/strace/versions).
 

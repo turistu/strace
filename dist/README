@@ -17,14 +17,15 @@ See the file README-hacking for information related to strace development.
 The project's homepage is at
 	https://strace.io
 
-The GIT repository of strace is available at
-	https://github.com/strace/strace/ and https://gitlab.com/strace/strace/
+Development of strace primarily takes place on GitHub:
+	https://github.com/strace/strace/
 
-strace has a mailing list:
+Everyone is welcome to open issues for bug reports and feature requests,
+submit pull requests, and participate in code reviews.
+
+strace also has a mailing list for discussions and patch submissions:
 	strace-devel@lists.strace.io
-
-Everyone is welcome to post bug reports, feature requests, comments
-and patches to the list.  The mailing list archives are available at
+The mailing list archives are available at
 	https://lists.strace.io/pipermail/strace-devel/
 
 System requirements:

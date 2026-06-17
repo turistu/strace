@@ -140,7 +140,7 @@ is_filled(const char *ptr, char fill, size_t size)
 # define CHECK_TYPE_SIZE(type_, sz_) \
 	static_assert(sizeof(type_) == (sz_), \
 		      "Unexpected size of " #type_ " (" #sz_ " expected).  " \
-		      "--enabled-bundled=yes configure option may be used " \
+		      "--enable-bundled=yes configure option may be used " \
 		      "to work around that.") \
 	/* End of CHECK_TYPE_SIZE */
 
@@ -148,7 +148,7 @@ is_filled(const char *ptr, char fill, size_t size)
 # define CHECK_IOCTL_SIZE(ioc_, sz_) \
 	static_assert(_IOC_SIZE(ioc_) == (sz_), \
 		"Unexpected size field value in " #ioc_ \
-		" (" #sz_" expected).  --enabled-bundled=yes configure " \
+		" (" #sz_" expected).  --enable-bundled=yes configure " \
 		"option may be used to work around that.") \
 	/* End of CHECK_IOCTL_SIZE */
 
