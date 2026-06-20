@@ -876,7 +876,7 @@ Before committing, verify:
 ## Related Documentation
 
 - `README-hacking` - General hacking guidelines
-- `src/xlat/README.md` - Xlat file format documentation
+- `doc/README-xlat.md` - Xlat file format documentation
 - `build-aux/gitlog-to-changelog` - Script that generates ChangeLog from commits
 
 ## Notes

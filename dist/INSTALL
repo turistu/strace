@@ -12,6 +12,12 @@
    personalities.
  - Requirements for optional features are documented in their description.
 
+On Debian/Ubuntu, the minimal build requirements can be installed with:
+	apt-get install gcc make gawk
+
+On Fedora/RHEL:
+	dnf install gcc make gawk
+
 1. CONFIGURATION AND OPTIONAL FEATURES
 
 Configuration is done using GNU Autoconf-generated configure script.
@@ -73,8 +79,25 @@ Taking the aforementioned into account, there are the following requirements:
 
 1.2.2. Stack unwinding (-k option)
 
+  --with-libdw            use libdw (elfutils) to implement stack tracing
   --with-libunwind        use libunwind to implement stack tracing support
   --with-libiberty        use libiberty to demangle symbols in stack trace
+
+Library requirements:
+ - Debian/Ubuntu: libdw-dev or libunwind-dev, libiberty-dev
+ - Fedora/RHEL: elfutils-devel or libunwind-devel, binutils-devel
+
+1.2.3. SELinux context support (--secontext option)
+
+Library requirements:
+ - Debian/Ubuntu: libselinux-dev
+ - Fedora/RHEL: libselinux-devel
+
+1.2.4. Bluetooth ioctl decoder
+
+Library requirements:
+ - Debian/Ubuntu: libbluetooth-dev
+ - Fedora/RHEL: bluez-libs-devel
 
 1.3. Architecture-specific features
 
@@ -105,11 +128,16 @@ make -j`nproc`
 
 make -j`nproc` check
 
-TESTS='list of tests'
-VALGRIND_FLAGS
-TIMEOUT_DURATION
+Optional test dependency:
+ - faketime    for time-related tests (localtime.test)
+   Debian/Ubuntu: faketime
+   Fedora/RHEL: faketime
 
-BTRFS_MOUNTPOINT
+Environment variables:
+ - TESTS='list of tests'      run specific tests only
+ - VALGRIND_FLAGS             flags to pass to valgrind
+ - TIMEOUT_DURATION           test timeout in seconds
+ - BTRFS_MOUNTPOINT           path for btrfs-specific tests
 
 4. ADDITIONAL TARGETS
 
@@ -126,7 +154,9 @@ make install
 
 maint/make-dist
 
-Requires git
+Requirements:
+ - git
+ - gzip, xz-utils (Debian/Ubuntu) or gzip, xz (Fedora/RHEL)
 
 6.2. dpkg package
 
