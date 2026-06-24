@@ -106,27 +106,25 @@ grep -l "DEF_MPERS_TYPE" src/*.c
 
 To use MPERS functionality in your decoder:
 
-1. **Typedef compound types** that are not already typedefed:
+1. **Include defs.h**:
    ```c
-   typedef struct stat struct_stat;
+   #include "defs.h"
    ```
 
 2. **Declare MPERS types** for each structure that varies by personality:
    ```c
    #include DEF_MPERS_TYPE(struct_stat)
    ```
-   These can be conditionally included if needed.
 
-3. **Include MPERS_DEFS once** after all DEF_MPERS_TYPE declarations:
-   ```c
-   #include MPERS_DEFS
-   ```
-
-4. **Include relevant headers** before MPERS_DEFS inclusion. These headers
-   must contain the structure definitions and any behavior-affecting defines:
+3. **Include relevant headers** and typedef compound types that are not
+   already typedefed:
    ```c
    #include <sys/stat.h>
-   #include DEF_MPERS_TYPE(struct_stat)
+   typedef struct stat struct_stat;
+   ```
+
+4. **Include MPERS_DEFS once** after all DEF_MPERS_TYPE declarations:
+   ```c
    #include MPERS_DEFS
    ```
 
@@ -142,11 +140,9 @@ To use MPERS functionality in your decoder:
    }
    ```
 
-6. **Call MPERS functions**:
-   - Inside files that include MPERS_DEFS: use
-     `MPERS_FUNC_NAME(function_name)(args)`
-   - In other files: call directly as `function_name(args)` (the build system
-     generates the dispatch)
+6. **Call MPERS functions** from other decoders:
+   - Call directly as `function_name(args)`
+   - The build system generates the dispatch logic automatically
 
 ## Example: print_timespec.c
 
@@ -176,3 +172,41 @@ MPERS_PRINTER_DECL(void, print_timespec, struct tcb *tcp,
 
 This file will be compiled three times on x86_64 (native, m32, mx32), with
 each version having different sizeof(struct_timespec) and field offsets.
+
+## Macro Reference
+
+### DEF_MPERS_TYPE(type_name)
+
+Marks a type for MPERS processing. Expands differently depending on build
+context:
+- During MPERS preprocessing: expands to a header file path that triggers
+  type extraction
+- In normal builds: expands to `"empty.h"` (no-op)
+
+The `type_name` must be a valid C identifier (underscores instead of spaces).
+
+### MPERS_DEFS
+
+Includes generated personality-specific type definitions. Expands to:
+- `"m32_type_defs.h"` during m32 personality build
+- `"mx32_type_defs.h"` during mx32 personality build
+- `"native_defs.h"` during native build
+
+Must appear after all `DEF_MPERS_TYPE()` declarations and after including
+headers that define the structures.
+
+### MPERS_PRINTER_DECL(return_type, function_name, parameters)
+
+Declares an MPERS-aware function with personality-specific naming. Expands to:
+- `return_type function_name(parameters)` in native builds
+- `return_type m32_function_name(parameters)` in m32 builds
+- `return_type mx32_function_name(parameters)` in mx32 builds
+
+The main decoder calls these functions, and the runtime selects the correct
+personality variant based on `tcp->currpers`.
+
+### MPERS_FUNC_NAME(function_name)
+
+Generates the personality-specific function name. Rarely needed in handwritten
+code - the build system auto-generates dispatch wrappers. Use only when
+calling MPERS functions from within other MPERS files.
