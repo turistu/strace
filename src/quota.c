@@ -441,11 +441,11 @@ print_qcmd(const uint32_t qcmd)
 	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 		tprint_comment_begin();
 
-	tprints_arg_begin("QCMD");
+	tprints_fn_begin("QCMD");
 	printxvals_ex(cmd, "Q_???", XLAT_STYLE_ABBREV, quotacmds, NULL);
-	tprint_arg_next();
+	tprint_fn_next();
 	printxvals_ex(type, "???QUOTA", XLAT_STYLE_ABBREV, quotatypes, NULL);
-	tprint_arg_end();
+	tprint_fn_end();
 
 	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 		tprint_comment_end();

@@ -71,6 +71,7 @@ libtests_a_SOURCES = \
 	pidns.h \
 	pipe_maxfd.c \
 	prctl_marker.c \
+	print_fields.c \
 	print_quoted_string.c \
 	print_time.c \
 	printflags.c \

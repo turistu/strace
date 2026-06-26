@@ -1014,9 +1014,9 @@ decode_ifla_vf_vlan_info(struct tcb *const tcp,
 	PRINT_FIELD_U(ivvi, qos);
 	tprint_struct_next();
 	tprints_field_name("vlan_proto");
-	tprints_arg_begin("htons");
+	tprints_fn_begin("htons");
 	printxval(ethernet_protocols, ntohs(ivvi.vlan_proto), "ETH_P_???");
-	tprint_arg_end();
+	tprint_fn_end();
 	tprint_struct_end();
 
 	return true;

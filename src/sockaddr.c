@@ -152,9 +152,9 @@ print_inet_addr(const int af,
 			if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 				tprint_comment_begin();
 
-			tprints_arg_begin("inet_addr");
+			tprints_fn_begin("inet_addr");
 			print_quoted_string(buf, sizeof(buf), QUOTE_0_TERMINATED);
-			tprint_arg_end();
+			tprint_fn_end();
 
 			if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 				tprint_comment_end();
@@ -176,18 +176,18 @@ print_inet_addr(const int af,
 			if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 				tprint_comment_begin();
 
-			tprints_arg_begin("inet_pton");
+			tprints_fn_begin("inet_pton");
 			print_xlat_ex(AF_INET6, "AF_INET6", XLAT_STYLE_ABBREV);
 
-			tprint_arg_next();
+			tprint_fn_next();
 			print_quoted_string(buf, sizeof(buf), QUOTE_0_TERMINATED);
 
 			if (var_name &&
 			    (xlat_verbose(xlat_verbosity) == XLAT_STYLE_ABBREV)) {
-				tprint_arg_next();
+				tprint_fn_next();
 				tprintf_string("&%s", var_name);
 			}
-			tprint_arg_end();
+			tprint_fn_end();
 
 			if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 				tprint_comment_end();
@@ -274,9 +274,9 @@ print_sockaddr_data_in6(struct tcb *tcp, const void *const buf,
 
 	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE ||
 	    xlat_verbose(xlat_verbosity) == XLAT_STYLE_ABBREV) {
-		tprints_arg_begin("htonl");
+		tprints_fn_begin("htonl");
 		PRINT_VAL_U(ntohl(sa_in6->sin6_flowinfo));
-		tprint_arg_end();
+		tprint_fn_end();
 	}
 
 	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
@@ -477,9 +477,9 @@ print_sockaddr_data_ipx(struct tcb *tcp, const void *const buf,
 	PRINT_FIELD_NET_PORT(*sa_ipx, sipx_port);
 	tprint_struct_next();
 	tprints_field_name("sipx_network");
-	tprints_arg_begin("htonl");
+	tprints_fn_begin("htonl");
 	PRINT_VAL_X(ntohl(sa_ipx->sipx_network));
-	tprint_arg_end();
+	tprint_fn_end();
 	tprint_struct_next();
 	PRINT_FIELD_VAL_ARRAY(*sa_ipx, sipx_node, PRINT_VAL_0X);
 	tprint_struct_next();
@@ -540,10 +540,10 @@ print_sll_protocol(const struct sockaddr_ll *const sa_ll)
 	if (x_style == XLAT_STYLE_VERBOSE)
 		tprint_comment_begin();
 
-	tprints_arg_begin("htons");
+	tprints_fn_begin("htons");
 	printxval_ex(ethernet_protocols, ntohs(sa_ll->sll_protocol),
 		     "ETH_P_???", XLAT_STYLE_ABBREV);
-	tprint_arg_end();
+	tprint_fn_end();
 
 	if (x_style == XLAT_STYLE_VERBOSE)
 		tprint_comment_end();
@@ -679,7 +679,7 @@ print_bluetooth_l2_psm(uint16_t psm)
 					  && psm_he <= L2CAP_PSM_LE_DYN_END)
 				      || (psm_he >= L2CAP_PSM_DYN_START);
 
-	tprints_arg_begin("htobs");
+	tprints_fn_begin("htobs");
 
 	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_ABBREV || !psm_str)
 		PRINT_VAL_X(psm_he);
@@ -709,7 +709,7 @@ print_bluetooth_l2_psm(uint16_t psm)
 		tprint_comment_end();
 
 print_bluetooth_l2_psm_end:
-	tprint_arg_end();
+	tprint_fn_end();
 }
 
 static void
@@ -719,7 +719,7 @@ print_bluetooth_l2_cid(uint16_t cid)
 	const char *cid_name = xlookup(bluetooth_l2_cid, cid_he);
 	const bool cid_str = cid_name || (cid_he >= L2CAP_CID_DYN_START);
 
-	tprints_arg_begin("htobs");
+	tprints_fn_begin("htobs");
 
 	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_ABBREV || !cid_str)
 		PRINT_VAL_X(cid_he);
@@ -744,7 +744,7 @@ print_bluetooth_l2_cid(uint16_t cid)
 		tprint_comment_end();
 
 print_bluetooth_l2_cid_end:
-	tprint_arg_end();
+	tprint_fn_end();
 }
 
 static void
@@ -785,9 +785,9 @@ print_sockaddr_data_bt(struct tcb *tcp, const void *const buf,
 	case sizeof(struct sockaddr_hci): {
 		const struct sockaddr_hci *const hci = buf;
 		tprints_field_name("hci_dev");
-		tprints_arg_begin("htobs");
+		tprints_fn_begin("htobs");
 		PRINT_VAL_U(btohs(hci->hci_dev));
-		tprint_arg_end();
+		tprint_fn_end();
 
 		/*
 		 * hci_channel field has been introduced

@@ -135,10 +135,10 @@ SYS_FUNC(socket)
 		break;
 
 	case AF_PACKET:
-		tprints_arg_begin("htons");
+		tprints_fn_begin("htons");
 		printxval(ethernet_protocols, ntohs(tcp->u_arg[2]),
 			  "ETH_P_???");
-		tprint_arg_end();
+		tprint_fn_end();
 		break;
 
 	case AF_IRDA:

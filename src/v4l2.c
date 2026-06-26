@@ -82,17 +82,17 @@ print_pixelformat(uint32_t fourcc, const struct xlat *xlat)
 		(unsigned char) (fourcc >> 24),
 	};
 
-	tprints_arg_begin("v4l2_fourcc");
+	tprints_fn_begin("v4l2_fourcc");
 	/* Generic char array printing routine.  */
 	for (unsigned int i = 0; i < ARRAY_SIZE(a); ++i) {
 		unsigned char c = a[i];
 
 		if (i)
-			tprint_arg_next();
+			tprint_fn_next();
 
 		print_char(c, SCF_QUOTES);
 	}
-	tprint_arg_end();
+	tprint_fn_end();
 
 	if (xlat) {
 		const char *pixfmt_name = xlookup(xlat, fourcc);

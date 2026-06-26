@@ -283,6 +283,7 @@ libstrace_a_SOURCES =	\
 	poll.c		\
 	prctl.c		\
 	print_dev_t.c	\
+	print_fields.c	\
 	print_fields.h	\
 	print_group_req.c \
 	print_ifindex.c	\

@@ -65,9 +65,9 @@ decode_mdba_mdb_entry_info(struct tcb *const tcp,
 				sizeof(entry.addr.u), "u");
 		tprint_struct_next();
 		tprints_field_name("proto");
-		tprints_arg_begin("htons");
+		tprints_fn_begin("htons");
 		printxval(addrfams, proto, "AF_???");
-		tprint_arg_end();
+		tprint_fn_end();
 		tprint_struct_end();
 		tprint_struct_end();
 	}

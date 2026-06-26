@@ -257,18 +257,18 @@ printclockname(int clockid)
 			tprint_comment_begin();
 
 		if ((clockid & CLOCKFD_MASK) == CLOCKFD)
-			tprints_arg_begin("FD_TO_CLOCKID");
+			tprints_fn_begin("FD_TO_CLOCKID");
 			PRINT_VAL_D(CLOCKID_TO_FD(clockid));
 		else {
-			tprints_arg_begin(CPUCLOCK_PERTHREAD(clockid) ?
+			tprints_fn_begin(CPUCLOCK_PERTHREAD(clockid) ?
 					  "MAKE_THREAD_CPUCLOCK" :
 					  "MAKE_PROCESS_CPUCLOCK");
 			PRINT_VAL_D(CPUCLOCK_PID(clockid));
-			tprint_arg_next();
+			tprint_fn_next();
 			printxval(cpuclocknames, clockid & CLOCKFD_MASK,
 				  "CPUCLOCK_???");
 		}
-		tprint_arg_end();
+		tprint_fn_end();
 
 		if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 			tprint_comment_end();

@@ -385,10 +385,10 @@ kd_kbd_entry(struct tcb *const tcp, const kernel_ulong_t arg, const bool get)
 		tprints_comment(str);
 	} else {
 		tprint_comment_begin();
-		tprints_arg_begin("K");
+		tprints_fn_begin("K");
 		printxvals_ex(ktyp, NULL, XLAT_STYLE_ABBREV,
 			      kd_key_types, NULL);
-		tprint_arg_next();
+		tprint_fn_next();
 
 		switch (ktyp) {
 		case KT_LATIN:
@@ -401,7 +401,7 @@ kd_kbd_entry(struct tcb *const tcp, const kernel_ulong_t arg, const bool get)
 			PRINT_VAL_X(kval);
 		}
 
-		tprint_arg_end();
+		tprint_fn_end();
 		tprint_comment_end();
 	}
 

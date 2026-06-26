@@ -476,7 +476,8 @@ files.
 
 ### Support
 
-- **src/print_fields.h** -- PRINT_FIELD macro definitions
+- **src/print_fields.h** -- PRINT_FIELD macros and printer declarations
+- **src/print_fields.c** -- Printer function implementations
 - **src/xlat.h** -- Xlat system structures
 - **src/sysent.h** -- Syscall entry structures
 - **src/trace_event.h** -- Event type enum

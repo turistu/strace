@@ -617,9 +617,26 @@ void tprints_arg_next_name(const char *name)
 
 ### Function-Call Delimiters
 
+For call-style decoder output such as `htons(...)`, `_IOC(...)`,
+`makedev(...)`, use the `fn` family of printers:
+
+```c
+void tprints_fn_begin(const char *name)
+    /* Print "name(" for call-style decoder output */
+
+void tprint_fn_next(void)
+    /* Print comma between call-style arguments */
+
+void tprint_fn_end(void)
+    /* Print ")" */
+```
+
+The `arg` variants frame the top-level syscall arguments and should
+not be used for nested call-style output:
+
 ```c
 void tprints_arg_begin(const char *name)
-    /* Print "name(" for function-call-like output */
+    /* Print "name(" for syscall argument framing */
 
 void tprint_arg_end(void)
     /* Print ")" */
@@ -904,7 +921,8 @@ SYS_FUNC(getpid)
 - **[HOWTO_ADD_IOCTL.md](HOWTO_ADD_IOCTL.md)** - Ioctl decoder guide
 - **[GLOSSARY.md](GLOSSARY.md)** - Term definitions including RVAL
   semantics, decoder concepts, xlat system
-- **src/print_fields.h** - PRINT_FIELD macro definitions (940 lines)
+- **src/print_fields.h** - PRINT_FIELD macros and printer declarations
+- **src/print_fields.c** - Printer function implementations
 - **src/defs.h** - Function prototypes and core definitions (2200+
   lines)
 

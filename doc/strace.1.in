@@ -1135,7 +1135,7 @@ Custom color schemes can be specified with the
 environment variable, for example:
 .br
 .RS
-STRACE_COLORS="syscall=1;33:argname=39:argval=35:const=1;36:comment=36:punct=0:retval=32:error=31"
+STRACE_COLORS="syscall=1;33:argname=39:argval=35:call=1;34:const=1;36:comment=36:punct=0:retval=32:error=31"
 .RE
 .IP
 The format of this value is
@@ -1152,6 +1152,7 @@ Recognized color keys are:
 .BR syscall ,
 .BR argname ,
 .BR argval ,
+.BR call ,
 .BR const ,
 .BR comment ,
 .BR punct ,

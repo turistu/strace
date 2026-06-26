@@ -20,6 +20,7 @@ enum color_mode_t {
 enum color_kind_t {
 	COLOR_ARGNAME,
 	COLOR_ARGVAL,
+	COLOR_CALL,
 	COLOR_COMMENT,
 	COLOR_CONST,
 	COLOR_ERROR,

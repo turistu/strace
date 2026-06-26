@@ -25,15 +25,15 @@ print_kernel_version(const unsigned long version)
 	const unsigned long ver_minor = (version >> 8) & 0xFF;
 	const unsigned long ver_patch = version & 0xFF;
 
-	tprints_arg_begin("KERNEL_VERSION");
+	tprints_fn_begin("KERNEL_VERSION");
 	PRINT_VAL_U(ver_major);
 
-	tprint_arg_next();
+	tprint_fn_next();
 	PRINT_VAL_U(ver_minor);
 
-	tprint_arg_next();
+	tprint_fn_next();
 	PRINT_VAL_U(ver_patch);
-	tprint_arg_end();
+	tprint_fn_end();
 
 	if (xlat_verbose(xlat_verbosity) == XLAT_STYLE_VERBOSE)
 		tprint_comment_end();

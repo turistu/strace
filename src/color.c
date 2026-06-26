@@ -31,6 +31,7 @@ struct color_key {
 static const struct color_key color_keys[] = {
 	DEF_COLOR_KEY(ARGNAME),
 	DEF_COLOR_KEY(ARGVAL),
+	DEF_COLOR_KEY(CALL),
 	DEF_COLOR_KEY(COMMENT),
 	DEF_COLOR_KEY(CONST),
 	DEF_COLOR_KEY(ERROR),
@@ -75,6 +76,7 @@ trim_spaces(char *s)
 static const char *color_seq_table_default[COLOR_KIND_MAX] = {
 	"\033[39m",	/* ARGNAME:  foreground */
 	"\033[35m",	/* ARGVAL:   magenta */
+	"\033[33m",	/* CALL:     yellow */
 	"\033[36m",	/* COMMENT:  cyan */
 	"\033[34m",	/* CONST:    blue */
 	"\033[31m",	/* ERROR:    red */

@@ -14,9 +14,9 @@
 #define PRINT_FIELD_HTONL_X(where_, field_)				\
 	do {								\
 		tprints_field_name(#field_);				\
-		tprints_arg_begin("htonl");				\
+		tprints_fn_begin("htonl");				\
 		PRINT_VAL_X(ntohl((where_).field_));			\
-		tprint_arg_end();					\
+		tprint_fn_end();					\
 	} while (0)
 
 void
