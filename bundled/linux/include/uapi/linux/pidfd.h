@@ -10,11 +10,6 @@
 /* Flags for pidfd_open().  */
 #define PIDFD_NONBLOCK	O_NONBLOCK
 #define PIDFD_THREAD	O_EXCL
-#ifdef __KERNEL__
-#include <linux/sched.h>
-#define PIDFD_STALE CLONE_PIDFD
-#define PIDFD_AUTOKILL O_TRUNC
-#endif
 
 /* Flags for pidfd_send_signal(). */
 #define PIDFD_SIGNAL_THREAD		(1UL << 0)

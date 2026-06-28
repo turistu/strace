@@ -407,8 +407,8 @@ struct tc_choke_xstats {
 #define TC_HTB_PROTOVER		3 /* the same as HTB and TC's major */
 
 struct tc_htb_opt {
-	struct tc_ratespec	rate;
-	struct tc_ratespec	ceil;
+	struct tc_ratespec 	rate;
+	struct tc_ratespec 	ceil;
 	__u32	buffer;
 	__u32	cbuffer;
 	__u32	quantum;

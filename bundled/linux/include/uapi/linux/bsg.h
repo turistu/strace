@@ -101,27 +101,27 @@ struct bsg_uring_cmd {
  *   [24..31] sense_len_wr   (bytes of sense data written to response buffer)
  *   [32..63] resid_len      (residual transfer length)
  */
-static inline __u8 bsg_scsi_res2_device_status(__u64 res2)
+static __inline__ __u8 bsg_scsi_res2_device_status(__u64 res2)
 {
 	return res2 & 0xff;
 }
-static inline __u8 bsg_scsi_res2_driver_status(__u64 res2)
+static __inline__ __u8 bsg_scsi_res2_driver_status(__u64 res2)
 {
 	return res2 >> 8;
 }
-static inline __u8 bsg_scsi_res2_host_status(__u64 res2)
+static __inline__ __u8 bsg_scsi_res2_host_status(__u64 res2)
 {
 	return res2 >> 16;
 }
-static inline __u8 bsg_scsi_res2_sense_len(__u64 res2)
+static __inline__ __u8 bsg_scsi_res2_sense_len(__u64 res2)
 {
 	return res2 >> 24;
 }
-static inline __u32 bsg_scsi_res2_resid_len(__u64 res2)
+static __inline__ __u32 bsg_scsi_res2_resid_len(__u64 res2)
 {
 	return res2 >> 32;
 }
-static inline __u64 bsg_scsi_res2_build(__u8 device_status, __u8 driver_status,
+static __inline__ __u64 bsg_scsi_res2_build(__u8 device_status, __u8 driver_status,
 					__u8 host_status, __u8 sense_len_wr,
 					__u32 resid_len)
 {

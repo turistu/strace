@@ -41,7 +41,7 @@ Deep dives into specific subsystems and specialized topics.
 - [README-xlat.md](README-xlat.md) — Xlat file format for constant translation tables
 - [../maint/gen/README.md](../maint/gen/README.md) — Syscall definition language for code generation
 - [HACKING-scripts](HACKING-scripts) — Maintenance scripts guide (xlat generation, ioctl tables)
-- [../bundled/README.md](../bundled/README.md) — Bundled Linux UAPI headers
+- [README-bundled.md](README-bundled.md) — Bundled Linux UAPI headers
 
 ## Build and Installation
 

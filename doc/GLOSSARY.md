@@ -35,7 +35,7 @@ between kernel and userspace. Located in `include/uapi/` and
 
 Vendored Linux kernel UAPI headers included in the `bundled/` directory.
 Provide build portability and forward compatibility when system headers
-lack newer definitions. See [bundled/README.md](../bundled/README.md).
+lack newer definitions. See [README-bundled.md](README-bundled.md).
 
 ## Core Data Structures
 

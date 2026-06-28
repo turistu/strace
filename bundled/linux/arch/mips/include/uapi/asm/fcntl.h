@@ -6,8 +6,8 @@
  *
  * Copyright (C) 1995, 96, 97, 98, 99, 2003, 05 Ralf Baechle
  */
-#ifndef _UAPI_ASM_FCNTL_H
-#define _UAPI_ASM_FCNTL_H
+#ifndef _ASM_FCNTL_H
+#define _ASM_FCNTL_H
 
 #include <asm/sgidefs.h>
 
@@ -57,4 +57,4 @@
 
 #include <asm-generic/fcntl.h>
 
-#endif /* _UAPI_ASM_FCNTL_H */
+#endif /* _ASM_FCNTL_H */
