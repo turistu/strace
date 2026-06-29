@@ -1235,7 +1235,8 @@ print_io_uring_zcrx_ifq_reg(struct tcb *tcp, const kernel_ulong_t addr)
 {
 	struct io_uring_zcrx_ifq_reg arg;
 
-	CHECK_TYPE_SIZE(struct io_uring_zcrx_ifq_reg, 96);
+	CHECK_TYPE_SIZE(arg, 96);
+	CHECK_TYPE_SIZE(arg.__resv, sizeof(uint64_t) * 2);
 
 	if (umove_or_printaddr(tcp, addr, &arg))
 		return;
@@ -1260,6 +1261,8 @@ print_io_uring_zcrx_ifq_reg(struct tcb *tcp, const kernel_ulong_t addr)
 	PRINT_FIELD_U(arg, zcrx_id);
 	tprint_struct_next();
 	PRINT_FIELD_U(arg, rx_buf_len);
+	tprint_struct_next();
+	PRINT_FIELD_ADDR64(arg, notif_desc);
 
 	if (!IS_ARRAY_ZERO(arg.__resv)) {
 		tprint_struct_next();
