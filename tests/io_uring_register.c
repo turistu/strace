@@ -2076,7 +2076,7 @@ test_IORING_REGISTER_ZCRX_IFQ(int fd_null)
 	       zcrx_ifq->offsets.head, zcrx_ifq->offsets.tail,
 	       zcrx_ifq->offsets.rqes,
 	       zcrx_ifq->zcrx_id,
-	       zcrx_ifq->notif_desc,
+	       (unsigned long long) zcrx_ifq->notif_desc,
 	       errstr);
 
 	memset(zcrx_ifq, 0, sizeof(*zcrx_ifq));
