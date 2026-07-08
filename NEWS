@@ -2,6 +2,9 @@ Noteworthy changes in release ?.? (????-??-??)
 ===============================================
 
 * Improvements
+  * Implemented decoding of IFLA_BRPORT_NEIGH_FORWARD_GRAT attribute.
+  * Updated lists of BPF_*, ETH_P_*, FS_*, IFLA_*, KVM_*, LANDLOCK_*, NL80211_*,
+    O_*, RTEXT_*, V4L2_*, and XFRM_MSG_* constants.
 
 Noteworthy changes in release 7.1 (2026-06-15)
 ==============================================

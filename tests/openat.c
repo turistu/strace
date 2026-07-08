@@ -77,6 +77,9 @@ main(void)
 # ifdef __O_SYNC
 		{ ARG_STR(__O_SYNC) },
 # endif
+# ifdef O_EMPTYPATH
+		{ ARG_STR(O_EMPTYPATH) },
+# endif
 # ifdef O_PATH
 		{ ARG_STR(O_PATH) },
 # endif

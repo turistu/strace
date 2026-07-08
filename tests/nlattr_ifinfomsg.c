@@ -484,10 +484,11 @@ main(void)
 	static const struct strval32 ifla_ext_masks[] = {
 		{ ARG_STR(0) },
 		{ ARG_STR(RTEXT_FILTER_VF) },
-		{ ARG_STR(0xdeface80) " /* RTEXT_FILTER_??? */" },
+		{ ARG_STR(0xdeface00) " /* RTEXT_FILTER_??? */" },
 		{ 0xdeadfeed, "RTEXT_FILTER_VF|RTEXT_FILTER_BRVLAN_COMPRESSED"
 			      "|RTEXT_FILTER_SKIP_STATS|RTEXT_FILTER_CFM_CONFIG"
-			      "|RTEXT_FILTER_CFM_STATUS|0xdeadfe80" },
+			      "|RTEXT_FILTER_CFM_STATUS|RTEXT_FILTER_MST"
+			      "|0xdeadfe00" },
 	};
 	for (size_t i = 0; i < ARRAY_SIZE(ifla_ext_masks); i++) {
 		TEST_NLATTR_OBJECT(fd, nlh0, hdrlen,

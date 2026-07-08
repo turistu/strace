@@ -30,6 +30,7 @@ ETH_P_CAIF	0x00F7		/* ST-Ericsson CAIF protocol	*/
 ETH_P_XDSA	0x00F8		/* Multiplexed DSA protocol	*/
 ETH_P_MAP	0x00F9		/* Qualcomm multiplexing and aggregation protocol */
 ETH_P_MCTP	0x00FA		/* Management component transport protocol (MCTP) packets */
+ETH_P_GRE_OSI	0x00FE		/* GRE tunnels for IS-IS over GRE */
 ETH_P_PUP	0x0200		/* Xerox PUP packet		*/
 ETH_P_PUPAT	0x0201		/* Xerox PUP Addr Trans packet	*/
 ETH_P_802_3_MIN	0x0600		/* If the value in the ethernet type is less than this value then the frame is Ethernet II. Else it is 802.3 */
@@ -66,6 +67,7 @@ ETH_P_ATMMPOA	0x884c		/* MultiProtocol Over ATM	*/
 ETH_P_PPP_DISC	0x8863		/* PPPoE discovery messages     */
 ETH_P_PPP_SES	0x8864		/* PPPoE session messages	*/
 ETH_P_LINK_CTL	0x886c		/* HPNA, wlan link local tunnel */
+ETH_P_8021AC	0x8870		/* 802.1AC LLC > 1500 bytes	*/
 ETH_P_ATMFATE	0x8884		/* Frame-based ATM Transport over Ethernet */
 ETH_P_PAE	0x888E		/* Port Access Entity (IEEE 802.1X) */
 ETH_P_REALTEK	0x8899		/* Multiple proprietary protocols */
@@ -102,3 +104,4 @@ ETH_P_DSA_8021Q	0xDADB		/* Fake VLAN Header for DSA [ NOT AN OFFICIALLY REGISTER
 ETH_P_DSA_A5PSW	0xE001		/* A5PSW Tag Value [ NOT AN OFFICIALLY REGISTERED ID ] */
 ETH_P_IFE	0xED3E		/* ForCES inter-FE LFB type */
 ETH_P_AF_IUCV   0xFBFB		/* IBM af_iucv [ NOT AN OFFICIALLY REGISTERED ID ] */
+ETH_P_NXP_NETC	0xFD3A		/* NXP NETC DSA [ NOT AN OFFICIALLY REGISTERED ID ] */

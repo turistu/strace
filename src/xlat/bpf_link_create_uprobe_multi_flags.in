@@ -1,3 +1,4 @@
 #From include/uapi/linux/bpf.h
 #Prefix BPF_F_UPROBE_MULTI_
 BPF_F_UPROBE_MULTI_RETURN	(1U << 0)
+BPF_F_UPROBE_MULTI_PATH_FD	(1U << 1)

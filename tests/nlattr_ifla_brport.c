@@ -39,7 +39,7 @@ main(void)
 		{ ENUM_KNOWN(0, IFLA_BRPORT_UNSPEC) },
 		{ ENUM_KNOWN(0x18, IFLA_BRPORT_FLUSH) },
 		{ ENUM_KNOWN(0x1a, IFLA_BRPORT_PAD) },
-		{ ARG_XLAT_UNKNOWN(0x2d, "IFLA_BRPORT_???") },
+		{ ARG_XLAT_UNKNOWN(0x2e, "IFLA_BRPORT_???") },
 		{ ARG_XLAT_UNKNOWN(0xbad, "IFLA_BRPORT_???") },
 	};
 	for (size_t i = 0; i < ARRAY_SIZE(un_attrs); i++) {
@@ -77,6 +77,7 @@ main(void)
 		{ ENUM_KNOWN(0x27, IFLA_BRPORT_LOCKED) },
 		{ ENUM_KNOWN(0x28, IFLA_BRPORT_MAB) },
 		{ ENUM_KNOWN(0x2b, IFLA_BRPORT_NEIGH_VLAN_SUPPRESS) },
+		{ ENUM_KNOWN(0x2d, IFLA_BRPORT_NEIGH_FORWARD_GRAT) },
 	};
 	void *nlh_u8 = midtail_alloc(NLMSG_SPACE(hdrlen),
 				     NLA_HDRLEN * 2 + sizeof(uint8_t));
