@@ -75,12 +75,13 @@ main(void)
 	/* Bogus values */
 	sys_landlock_add_rule(0xdeadc0de, 0xfacebeef, attr_path + 1, 1);
 	printf("landlock_add_rule(-559038242"
-	       ", 0xfacebeef /* LANDLOCK_RULE_??? */, %p, 0x1) = %s\n",
+	       ", 0xfacebeef /* LANDLOCK_RULE_??? */, %p"
+	       ", LANDLOCK_ADD_RULE_QUIET) = %s\n",
 	       attr_path + 1, errstr);
 
 	sys_landlock_add_rule(1729, 3, attr_path + 1, 0xffffffff);
 	printf("landlock_add_rule(1729, 0x3 /* LANDLOCK_RULE_??? */, %p"
-	       ", 0xffffffff) = %s\n",
+	       ", LANDLOCK_ADD_RULE_QUIET|0xfffffffe) = %s\n",
 	       attr_path + 1, errstr);
 
 	/* Invalid pointer */

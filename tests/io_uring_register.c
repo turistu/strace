@@ -2422,7 +2422,75 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       (unsigned long long) scq_data->hdr_alignment,
 	       errstr);
 
-	/* Test 7: Single entry with NULL query_data */
+	/* Test 7: Single entry with IO_URING_QUERY_ZCRX_NOTIF */
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_zcrx_notif,
+				    notif_data);
+
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) notif_data;
+	hdr->query_op = IO_URING_QUERY_ZCRX_NOTIF;
+	hdr->size = sizeof(*notif_data);
+	hdr->result = 0;
+
+	memset(notif_data, 0, sizeof(*notif_data));
+	notif_data->notif_flags = 0x3;
+	notif_data->notif_stats_size = 16;
+	notif_data->notif_stats_off_alignment = 8;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={notif_flags=%#x, notif_stats_size=%u"
+	       ", notif_stats_off_alignment=%u}, next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       notif_data,
+	       XLAT_ARGS(IO_URING_QUERY_ZCRX_NOTIF),
+	       (unsigned int) sizeof(*notif_data),
+	       notif_data->notif_flags,
+	       notif_data->notif_stats_size,
+	       notif_data->notif_stats_off_alignment,
+	       errstr);
+
+	/* Test 8: IO_URING_QUERY_ZCRX_NOTIF with non-zero reserved fields */
+	memset(hdr, 0, sizeof(*hdr));
+	hdr->next_entry = 0;
+	hdr->query_data = (uintptr_t) notif_data;
+	hdr->query_op = IO_URING_QUERY_ZCRX_NOTIF;
+	hdr->size = sizeof(*notif_data);
+	hdr->result = 0;
+
+	memset(notif_data, 0, sizeof(*notif_data));
+	notif_data->notif_flags = 0x7;
+	notif_data->notif_stats_size = 32;
+	notif_data->notif_stats_off_alignment = 16;
+	notif_data->__resv1 = 0xdeadbeef;
+	notif_data->__resv2[0] = 0x1111111111111111ULL;
+	notif_data->__resv2[3] = 0x3333333333333333ULL;
+
+	sys_io_uring_register(fd_null, query_ops.val, hdr, 0);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {query_data=%p, query_op=" XLAT_FMT ", size=%u, result=0"
+	       ", query_data={notif_flags=%#x, notif_stats_size=%u"
+	       ", notif_stats_off_alignment=%u"
+	       ", __resv1=%#x"
+	       ", __resv2=[%#llx, 0, 0, %#llx]"
+	       "}, next_entry=NULL}, 0) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(query_ops.val, query_ops.str),
+	       notif_data,
+	       XLAT_ARGS(IO_URING_QUERY_ZCRX_NOTIF),
+	       (unsigned int) sizeof(*notif_data),
+	       notif_data->notif_flags,
+	       notif_data->notif_stats_size,
+	       notif_data->notif_stats_off_alignment,
+	       notif_data->__resv1,
+	       (unsigned long long) notif_data->__resv2[0],
+	       (unsigned long long) notif_data->__resv2[3],
+	       errstr);
+
+	/* Test 9: Single entry with NULL query_data */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = 0;
 	hdr->query_data = 0;
@@ -2440,7 +2508,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       hdr->size,
 	       errstr);
 
-	/* Test 8: Single entry with invalid query_op */
+	/* Test 10: Single entry with invalid query_op */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = 0;
 	hdr->query_data = (uintptr_t) opcode_data;
@@ -2462,7 +2530,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       opcode_data,
 	       errstr);
 
-	/* Test 9: Two-entry linked list (OPCODES -> ZCRX) */
+	/* Test 11: Two-entry linked list (OPCODES -> ZCRX) */
 	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_hdr, hdr2);
 	TAIL_ALLOC_OBJECT_CONST_PTR(struct io_uring_query_opcode, opcode_data2);
 
@@ -2512,7 +2580,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       zcrx_data->nr_ctrl_opcodes,
 	       errstr);
 
-	/* Test 11: Non-zero reserved fields (__resv) */
+	/* Test 12: Non-zero reserved fields (__resv) */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = 0;
 	hdr->query_data = (uintptr_t) opcode_data;
@@ -2542,7 +2610,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       hdr->__resv[2],
 	       errstr);
 
-	/* Test 12: Non-zero __pad in io_uring_query_opcode */
+	/* Test 13: Non-zero __pad in io_uring_query_opcode */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = 0;
 	hdr->query_data = (uintptr_t) opcode_data;
@@ -2568,7 +2636,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       opcode_data->__pad,
 	       errstr);
 
-	/* Test 13: Non-zero reserved fields in io_uring_query_zcrx */
+	/* Test 14: Non-zero reserved fields in io_uring_query_zcrx */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = 0;
 	hdr->query_data = (uintptr_t) zcrx_data;
@@ -2596,7 +2664,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       (unsigned long long) zcrx_data->__resv2,
 	       errstr);
 
-	/* Test 14: Invalid pointer in middle of chain */
+	/* Test 15: Invalid pointer in middle of chain */
 	memset(hdr, 0, sizeof(*hdr));
 	hdr->next_entry = (uintptr_t) (hdr + 1); /* Invalid pointer */
 	hdr->query_data = (uintptr_t) opcode_data;
@@ -2620,7 +2688,7 @@ test_IORING_REGISTER_QUERY(int fd_null)
 	       hdr + 1,
 	       errstr);
 
-	/* Test 15: sequence_truncation_needed() - chain of DEFAULT_STRLEN entries */
+	/* Test 16: sequence_truncation_needed() - chain of DEFAULT_STRLEN entries */
 	struct io_uring_query_hdr *hdr_chain[DEFAULT_STRLEN + 1];
 
 	/* Create chain of DEFAULT_STRLEN+1 entries, all using the same opcode_data */
@@ -2809,7 +2877,63 @@ test_IORING_REGISTER_ZCRX_CTRL(int fd_null, int fd_full)
 #endif
 	       errstr);
 
-	/* Test 9: Unknown opcode */
+	/* Test 9: Basic ARM_NOTIFICATION operation */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 0x42;
+	ctrl->op = ZCRX_CTRL_ARM_NOTIFICATION;
+	ctrl->zc_arm_notif.notif_type = ZCRX_NOTIF_NO_BUFFERS;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", zc_arm_notif={notif_type=" XLAT_FMT "}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_ARM_NOTIFICATION),
+	       XLAT_ARGS(ZCRX_NOTIF_NO_BUFFERS),
+	       errstr);
+
+	/* Test 10: ARM_NOTIFICATION with ZCRX_NOTIF_COPY */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 0x43;
+	ctrl->op = ZCRX_CTRL_ARM_NOTIFICATION;
+	ctrl->zc_arm_notif.notif_type = ZCRX_NOTIF_COPY;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", zc_arm_notif={notif_type=" XLAT_FMT "}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_ARM_NOTIFICATION),
+	       XLAT_ARGS(ZCRX_NOTIF_COPY),
+	       errstr);
+
+	/* Test 11: ARM_NOTIFICATION with non-zero reserved fields */
+	memset(ctrl, 0, sizeof(*ctrl));
+	ctrl->zcrx_id = 1;
+	ctrl->op = ZCRX_CTRL_ARM_NOTIFICATION;
+	ctrl->zc_arm_notif.notif_type = ZCRX_NOTIF_NO_BUFFERS;
+	ctrl->zc_arm_notif.__resv[0] = 0xdeadbeef;
+	ctrl->zc_arm_notif.__resv[10] = 0xcafebabe;
+
+	sys_io_uring_register(fd_null, zcrx_ctrl_ops.val, ctrl, 1);
+	printf("io_uring_register(%u<%s>, " XLAT_FMT
+	       ", {zcrx_id=%u, op=" XLAT_FMT
+	       ", zc_arm_notif={notif_type=" XLAT_FMT
+	       ", __resv=[%#x, 0, 0, 0, 0, 0, 0, 0, 0, 0, %#x]}}, 1) = %s\n",
+	       fd_null, path_null,
+	       XLAT_SEL(zcrx_ctrl_ops.val, zcrx_ctrl_ops.str),
+	       ctrl->zcrx_id,
+	       XLAT_ARGS(ZCRX_CTRL_ARM_NOTIFICATION),
+	       XLAT_ARGS(ZCRX_NOTIF_NO_BUFFERS),
+	       ctrl->zc_arm_notif.__resv[0],
+	       ctrl->zc_arm_notif.__resv[10],
+	       errstr);
+
+	/* Test 12: Unknown opcode */
 	memset(ctrl, 0, sizeof(*ctrl));
 	ctrl->zcrx_id = 1;
 	ctrl->op = 0xdeadbeef;

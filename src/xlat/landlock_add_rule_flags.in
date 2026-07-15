@@ -1,0 +1,4 @@
+#unconditional
+#From include/uapi/linux/landlock.h
+#Prefix LANDLOCK_ADD_RULE_
+LANDLOCK_ADD_RULE_QUIET

@@ -26,6 +26,12 @@
 # ifndef FUTEX_CLOCK_REALTIME
 #  define FUTEX_CLOCK_REALTIME 256
 # endif
+# ifndef FUTEX_ROBUST_UNLOCK
+#  define FUTEX_ROBUST_UNLOCK 512
+# endif
+# ifndef FUTEX_ROBUST_LIST32
+#  define FUTEX_ROBUST_LIST32 1024
+# endif
 # ifndef FUTEX_CMD_MASK
 #  define FUTEX_CMD_MASK ~(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME)
 # endif
@@ -792,6 +798,82 @@ main(int argc, char *argv[])
 	       " = %s\n",
 	       uaddr + 1, (long long) tmout->tv_sec,
 	       zero_extend_signed_to_ull(tmout->tv_nsec), sprintrc(rc));
+
+
+	/* FUTEX_UNLOCK_PI_LIST* - robust list unlock variants of
+	 * FUTEX_UNLOCK_PI.
+	 * Possible flags: PRIVATE, ROBUST_LIST32
+	 */
+
+	CHECK_FUTEX_ENOSYS(uaddr + 1, FUTEX_UNLOCK_PI_LIST64, VAL, tmout,
+		uaddr2 + 1, VAL3, (rc == -1) && (errno == EFAULT));
+	printf("futex(%p, FUTEX_UNLOCK_PI_LIST64) = %s\n",
+	       uaddr + 1, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr + 1, FUTEX_UNLOCK_PI_LIST64_PRIVATE, VAL,
+		tmout, uaddr2 + 1, VAL3, (rc == -1) && (errno == EFAULT));
+	printf("futex(%p, FUTEX_UNLOCK_PI_LIST64_PRIVATE) = %s\n",
+	       uaddr + 1, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr + 1, FUTEX_UNLOCK_PI_LIST32, VAL, tmout,
+		uaddr2 + 1, VAL3, (rc == -1) && (errno == EFAULT));
+	printf("futex(%p, FUTEX_UNLOCK_PI_LIST32) = %s\n",
+	       uaddr + 1, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr + 1, FUTEX_UNLOCK_PI_LIST32_PRIVATE, VAL,
+		tmout, uaddr2 + 1, VAL3, (rc == -1) && (errno == EFAULT));
+	printf("futex(%p, FUTEX_UNLOCK_PI_LIST32_PRIVATE) = %s\n",
+	       uaddr + 1, sprintrc(rc));
+
+	/* FUTEX_UNLOCK_WAKE_LIST* - robust list unlock variants of
+	 * FUTEX_WAKE.
+	 * Possible flags: PRIVATE, ROBUST_LIST32
+	 */
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_WAKE_LIST64, 10, NULL, NULL,
+		0, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_WAKE_LIST64, %u) = %s\n",
+	       uaddr, 10, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_WAKE_LIST64_PRIVATE, 10,
+		NULL, NULL, 0, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_WAKE_LIST64_PRIVATE, %u) = %s\n",
+	       uaddr, 10, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_WAKE_LIST32, 10, NULL, NULL,
+		0, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_WAKE_LIST32, %u) = %s\n",
+	       uaddr, 10, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_WAKE_LIST32_PRIVATE, 10,
+		NULL, NULL, 0, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_WAKE_LIST32_PRIVATE, %u) = %s\n",
+	       uaddr, 10, sprintrc(rc));
+
+	/* FUTEX_UNLOCK_BITSET_LIST* - robust list unlock variants of
+	 * FUTEX_WAKE_BITSET.
+	 * Possible flags: PRIVATE, ROBUST_LIST32
+	 */
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_BITSET_LIST64, 10, NULL,
+		NULL, VAL3, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_BITSET_LIST64, %u, %#x) = %s\n",
+	       uaddr, 10, VAL3_PR, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_BITSET_LIST64_PRIVATE, 10,
+		NULL, NULL, VAL3, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_BITSET_LIST64_PRIVATE, %u, %#x)"
+	       " = %s\n", uaddr, 10, VAL3_PR, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_BITSET_LIST32, 10, NULL,
+		NULL, VAL3, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_BITSET_LIST32, %u, %#x) = %s\n",
+	       uaddr, 10, VAL3_PR, sprintrc(rc));
+
+	CHECK_FUTEX_ENOSYS(uaddr, FUTEX_UNLOCK_BITSET_LIST32_PRIVATE, 10,
+		NULL, NULL, VAL3, (rc == 0));
+	printf("futex(%p, FUTEX_UNLOCK_BITSET_LIST32_PRIVATE, %u, %#x)"
+	       " = %s\n", uaddr, 10, VAL3_PR, sprintrc(rc));
 
 
 	/*

@@ -1840,6 +1840,42 @@ BEGIN_BPF_CMD_DECODER(BPF_LINK_CREATE)
 		attr_size = offsetofend(typeof(attr), tracing.cookie);
 		break;
 
+	case BPF_TRACE_FENTRY_MULTI:
+	case BPF_TRACE_FEXIT_MULTI:
+	case BPF_TRACE_FSESSION_MULTI: {
+		/*
+		 * Introduced in Linux commit v7.2-rc1~142^2~29^2~19 .
+		 * BPF_TRACE_FSESSION_MULTI in Linux commit
+		 * v7.2-rc1~142^2~29^2~7 .
+		 */
+		union {
+			uint32_t id;
+			uint64_t cookie;
+		} buf;
+
+		tprint_struct_next();
+		tprints_field_name("tracing_multi");
+		tprint_struct_begin();
+		tprints_field_name("ids");
+		print_big_u64_addr(attr.tracing_multi.ids);
+		print_array(tcp, attr.tracing_multi.ids,
+			    attr.tracing_multi.cnt,
+			    &buf.id, sizeof(buf.id),
+			    tfetch_mem, print_uint_array_member, 0);
+		tprint_struct_next();
+		tprints_field_name("cookies");
+		print_big_u64_addr(attr.tracing_multi.cookies);
+		print_array(tcp, attr.tracing_multi.cookies,
+			    attr.tracing_multi.cnt,
+			    &buf.cookie, sizeof(buf.cookie),
+			    tfetch_mem, print_xint_array_member, 0);
+		tprint_struct_next();
+		PRINT_FIELD_U(attr.tracing_multi, cnt);
+		tprint_struct_end();
+		attr_size = offsetofend(typeof(attr), tracing_multi.cnt);
+		break;
+	}
+
 	/* TODO: prog type == BPF_PROG_TYPE_NETFILTER */
 	case BPF_NETFILTER:
 		/* Introduced in Linux commit v6.4-rc6~18^2~5^2~2 */
@@ -1976,8 +2012,12 @@ BEGIN_BPF_CMD_DECODER(BPF_LINK_CREATE)
 				  "BPF_F_UPROBE_MULTI_???");
 		tprint_struct_next();
 		PRINT_FIELD_TGID(attr.uprobe_multi, pid, tcp);
+		if (len > offsetof(typeof(attr), uprobe_multi.path_fd)) {
+			tprint_struct_next();
+			PRINT_FIELD_FD(attr.uprobe_multi, path_fd, tcp);
+		}
 		tprint_struct_end();
-		attr_size = offsetofend(typeof(attr), uprobe_multi.pid);
+		attr_size = offsetofend(typeof(attr), uprobe_multi.path_fd);
 		break;
 	}
 
