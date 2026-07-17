@@ -17,6 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <linux/fcntl.h>
+#include <linux/openat2.h>
 
 #ifndef VERBOSE
 # define VERBOSE 0
@@ -74,7 +75,11 @@ main(void)
 		{ ARG_STR(O_WRONLY|O_CREAT) },
 		{ ARG_STR(O_RDWR|O_LARGEFILE) },
 		{ ARG_STR(O_ACCMODE|O_TMPFILE) },
+		{ ARG_STR(O_RDONLY|OPENAT2_REGULAR) },
+		{ ARG_STR(O_RDONLY|O_CLOEXEC|OPENAT2_REGULAR) },
 		{ ARG_ULL_STR(O_RDONLY|0xdeadface80000000) },
+		{ ARG_ULL_STR(O_RDONLY|O_EXCL|0xdeadface80000000) },
+		{ ARG_ULL_STR(O_RDONLY|OPENAT2_REGULAR|0xdeadface80000000) },
 	};
 	static uint64_t modes[] = { 0, 0777, 0xbadc0dedfacebeefULL };
 	static struct strval64 resolve[] = {

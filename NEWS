@@ -2,6 +2,7 @@ Noteworthy changes in release ?.? (????-??-??)
 ===============================================
 
 * Improvements
+  * Implemented decoding of OPENAT2_REGULAR openat2 flag.
   * Implemented decoding of IFLA_BRPORT_NEIGH_FORWARD_GRAT attribute.
   * Implemented decoding of BPF_TRACE_FENTRY_MULTI,
     BPF_TRACE_FEXIT_MULTI, and BPF_TRACE_FSESSION_MULTI bpf attach types.

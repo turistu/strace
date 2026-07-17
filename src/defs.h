@@ -1056,6 +1056,8 @@ extern int printargs(struct tcb *);
 extern int printflags_ex(uint64_t flags, const char *dflt,
 			 enum xlat_style, const struct xlat *, ...)
 	ATTRIBUTE_SENTINEL;
+extern const char *sprintflags_exv(const char *prefix, uint64_t flags, char sep,
+				   enum xlat_style, va_list xlats);
 extern const char *sprintflags_ex(const char *prefix, const struct xlat *,
 				  uint64_t flags, char sep, enum xlat_style);
 

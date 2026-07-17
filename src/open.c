@@ -23,6 +23,7 @@
 #include "xlat/open_access_modes.h"
 #include "xlat/open_mode_flags.h"
 #include "xlat/open_resolve_flags.h"
+#include "xlat/openat2_flags.h"
 
 /* The fd is an "int", so when decoding x86 on x86_64, we need to force sign
  * extension to get the right value.  We do this by declaring fd as int here.
@@ -68,7 +69,7 @@ done:		;
  * other bits are real flags.
  */
 static const char *
-sprint_open_modes64(uint64_t flags)
+sprint_open_mode_flags(uint64_t flags, ...)
 {
 	static char outstr[sizeof("flags O_ACCMODE")];
 	char *p;
@@ -81,15 +82,25 @@ sprint_open_modes64(uint64_t flags)
 	if (str) {
 		*p++ = sep;
 		p = stpcpy(p, str);
-		flags &= ~3;
+		flags &= ~(uint64_t) 3;
 		if (!flags)
 			return outstr;
 		sep = '|';
 	}
 	*p = '\0';
 
-	return sprintflags_ex(outstr, open_mode_flags, flags, sep,
-			      XLAT_STYLE_ABBREV) ?: outstr;
+	va_list args;
+	va_start(args, flags);
+	str = sprintflags_exv(outstr, flags, sep, XLAT_STYLE_ABBREV, args);
+	va_end(args);
+
+	return str ?: outstr;
+}
+
+static const char *
+sprint_open_modes64(uint64_t flags)
+{
+	return sprint_open_mode_flags(flags, open_mode_flags, NULL);
 }
 
 const char *
@@ -108,6 +119,16 @@ void
 tprint_open_modes(unsigned int flags)
 {
 	tprint_open_modes64(flags);
+}
+
+static void
+tprint_open_how_flags(uint64_t flags)
+{
+	print_xlat_ex(flags,
+		      sprint_open_mode_flags(flags, open_mode_flags,
+					    openat2_flags, NULL)
+			+ sizeof("flags"),
+		      XLAT_STYLE_DEFAULT);
 }
 
 static int
@@ -151,7 +172,7 @@ print_open_how(struct tcb *tcp, kernel_ulong_t addr, kernel_ulong_t size)
 		return;
 
 	tprint_struct_begin();
-	PRINT_FIELD_OBJ_VAL(how, flags, tprint_open_modes64);
+	PRINT_FIELD_OBJ_VAL(how, flags, tprint_open_how_flags);
 	if ((how.flags & (O_CREAT | __O_TMPFILE)) || how.mode) {
 		tprint_struct_next();
 		PRINT_FIELD_OBJ_U(how, mode, print_numeric_ll_umode_t);

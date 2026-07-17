@@ -322,12 +322,13 @@ sprintxval_ex(char *const buf, const size_t size, const struct xlat *const x,
  * +------------+------------+---------+------------+
  */
 const char *
-sprintflags_ex(const char *prefix, const struct xlat *xlat, uint64_t flags,
-	       char sep, enum xlat_style style)
+sprintflags_exv(const char *prefix, uint64_t flags, char sep,
+		enum xlat_style style, va_list xlats)
 {
 	static char outstr[1024];
 	char *outptr;
 	int found = 0;
+	const struct xlat *xlat = va_arg(xlats, const struct xlat *);
 
 	outptr = stpcpy(outstr, prefix);
 	style = get_xlat_style(style);
@@ -368,20 +369,22 @@ sprintflags_ex(const char *prefix, const struct xlat *xlat, uint64_t flags,
 				    sprint_xlat_val(flags, style));
 	}
 
-	for (size_t idx = 0; flags && idx < xlat->size; idx++) {
-		if (xlat->data[idx].val && xlat->data[idx].str
-		    && (flags & xlat->data[idx].val) == xlat->data[idx].val) {
-			if (sep) {
-				*outptr++ = sep;
-			} else if (xlat_verbose(style) == XLAT_STYLE_VERBOSE &&
-				   !(style & SPFF_AUXSTR_MODE)) {
-				outptr = stpcpy(outptr, " /* ");
-			}
+	for (; xlat; xlat = va_arg(xlats, const struct xlat *)) {
+		for (size_t idx = 0; flags && idx < xlat->size; idx++) {
+			if (xlat->data[idx].val && xlat->data[idx].str
+			    && (flags & xlat->data[idx].val) == xlat->data[idx].val) {
+				if (sep) {
+					*outptr++ = sep;
+				} else if (xlat_verbose(style) == XLAT_STYLE_VERBOSE &&
+					   !(style & SPFF_AUXSTR_MODE)) {
+					outptr = stpcpy(outptr, " /* ");
+				}
 
-			outptr = stpcpy(outptr, xlat->data[idx].str);
-			found = 1;
-			sep = '|';
-			flags &= ~xlat->data[idx].val;
+				outptr = stpcpy(outptr, xlat->data[idx].str);
+				found = 1;
+				sep = '|';
+				flags &= ~xlat->data[idx].val;
+			}
 		}
 	}
 
@@ -402,6 +405,26 @@ sprintflags_ex(const char *prefix, const struct xlat *xlat, uint64_t flags,
 		outptr = stpcpy(outptr, " */");
 
 	return outptr != outstr ? outstr : NULL;
+}
+
+static const char *
+sprintflags_exl(const char *prefix, uint64_t flags, char sep,
+		   enum xlat_style style, ...)
+{
+	va_list args;
+
+	va_start(args, style);
+	const char *r = sprintflags_exv(prefix, flags, sep, style, args);
+	va_end(args);
+
+	return r;
+}
+
+const char *
+sprintflags_ex(const char *prefix, const struct xlat *xlat, uint64_t flags,
+	       char sep, enum xlat_style style)
+{
+	return sprintflags_exl(prefix, flags, sep, style, xlat, NULL);
 }
 
 /**
