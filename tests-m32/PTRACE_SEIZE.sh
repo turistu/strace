@@ -1,0 +1,1 @@
+../tests/PTRACE_SEIZE.sh

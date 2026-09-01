@@ -1,0 +1,1 @@
+../tests/strace-p-Y-p2.c

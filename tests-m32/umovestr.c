@@ -1,0 +1,1 @@
+../tests/umovestr.c

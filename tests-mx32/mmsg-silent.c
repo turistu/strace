@@ -1,0 +1,1 @@
+../tests/mmsg-silent.c

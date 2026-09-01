@@ -1,0 +1,1 @@
+../tests/lsm_set_self_attr.c

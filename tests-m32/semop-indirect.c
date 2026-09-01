@@ -1,0 +1,1 @@
+../tests/semop-indirect.c

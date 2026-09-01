@@ -1,0 +1,1 @@
+../tests/faccessat-P.c

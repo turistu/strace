@@ -1,0 +1,1 @@
+../tests/scm_credentials.c

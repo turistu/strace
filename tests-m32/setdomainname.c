@@ -1,0 +1,1 @@
+../tests/setdomainname.c

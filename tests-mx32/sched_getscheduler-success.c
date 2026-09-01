@@ -1,0 +1,1 @@
+../tests/sched_getscheduler-success.c

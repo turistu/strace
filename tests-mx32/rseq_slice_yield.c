@@ -1,0 +1,1 @@
+../tests/rseq_slice_yield.c
