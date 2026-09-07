@@ -607,3 +607,11 @@ SO_INQ	16466
 #else
 SO_INQ	84
 #endif
+
+#if defined __sparc__
+SO_RIGHTS_NOTRUNC	94
+#elif defined __hppa__
+SO_RIGHTS_NOTRUNC	16467
+#else
+SO_RIGHTS_NOTRUNC	85
+#endif

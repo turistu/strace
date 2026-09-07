@@ -159,6 +159,7 @@ main(void)
 		{ ARG_STR(SO_RCVPRIORITY), .optsz = sizeof(int) },
 		{ ARG_STR(SO_PASSRIGHTS), .optsz = sizeof(int) },
 		{ ARG_STR(SO_INQ), .optsz = sizeof(int) },
+		{ ARG_STR(SO_RIGHTS_NOTRUNC), .optsz = sizeof(int) },
 		/* SO_PEERPIDFD - see so_peerpidfd test */
 		{ 78, NULL },
 		{ -1, NULL },

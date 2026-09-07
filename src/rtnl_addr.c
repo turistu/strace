@@ -16,6 +16,8 @@
 #include <linux/if_addr.h>
 
 #include "xlat/ifaddrflags.h"
+#include "xlat/ifa_lifetimes.h"
+#include "xlat/ifa_protocols.h"
 #include "xlat/routing_scopes.h"
 #include "xlat/rtnl_addr_attrs.h"
 
@@ -27,6 +29,15 @@ decode_ifa_address(struct tcb *const tcp,
 {
 	const struct ifaddrmsg *const ifaddr = opaque_data;
 
+	/*
+	 * There are two additional address families besides AF_INET{,6},
+	 * that implement (some) address-like IFA_* attribute types,
+	 * AF_PHONET (IFA_LOCAL) and AF_MCTP (IFA_ADDRESS and IFA_LOCAL),
+	 * but since addresses in these address families are simple single-byte
+	 * values, decode_inet_addr() is "good enough" in these cases,
+	 * as it prints the addresses for unsupported address families
+	 * as a hexadecimal string.
+	 */
 	decode_inet_addr(tcp, addr, len, ifaddr->ifa_family, NULL);
 
 	return true;
@@ -44,13 +55,19 @@ decode_ifa_cacheinfo(struct tcb *const tcp,
 		return false;
 	else if (!umove_or_printaddr(tcp, addr, &ci)) {
 		tprint_struct_begin();
-		PRINT_FIELD_U(ci, ifa_prefered);
+		/*
+		 * ifa_lifetimes contains INFINITY_LIFE_TIME constant,
+		 * that is defined in include/net/addrconf.h and is not exposed
+		 * in UAPI.
+		 */
+		PRINT_FIELD_XVAL_U_VERBOSE(ci, ifa_prefered,
+					   ifa_lifetimes, NULL);
 		tprint_struct_next();
-		PRINT_FIELD_U(ci, ifa_valid);
+		PRINT_FIELD_XVAL_U_VERBOSE(ci, ifa_valid, ifa_lifetimes, NULL);
 		tprint_struct_next();
-		PRINT_FIELD_U(ci, cstamp);
+		PRINT_FIELD_TICKS(ci, cstamp, 100, 2);
 		tprint_struct_next();
-		PRINT_FIELD_U(ci, tstamp);
+		PRINT_FIELD_TICKS(ci, tstamp, 100, 2);
 		tprint_struct_end();
 	}
 
@@ -63,14 +80,28 @@ decode_ifa_flags(struct tcb *const tcp,
 		 const unsigned int len,
 		 const void *const opaque_data)
 {
-	uint32_t ifa_flags;
+	static const struct decode_nla_xlat_opts opts = {
+		.xlat = ifaddrflags,
+		.dflt = "IFA_F_???",
+		.size = 4,
+	};
 
-	if (len < sizeof(ifa_flags))
-		return false;
-	else if (!umove_or_printaddr(tcp, addr, &ifa_flags))
-		printflags(ifaddrflags, ifa_flags, "IFA_F_???");
+	return decode_nla_flags(tcp, addr, len, &opts);
+}
 
-	return true;
+static bool
+decode_ifa_proto(struct tcb *const tcp,
+		 const kernel_ulong_t addr,
+		 const unsigned int len,
+		 const void *const opaque_data)
+{
+	static const struct decode_nla_xlat_opts opts = {
+		.xlat = ifa_protocols,
+		.dflt = "IFAPROT_???",
+		.size = 1,
+	};
+
+	return decode_nla_xval(tcp, addr, len, &opts);
 }
 
 static const nla_decoder_t ifaddrmsg_nla_decoders[] = {
@@ -84,6 +115,8 @@ static const nla_decoder_t ifaddrmsg_nla_decoders[] = {
 	[IFA_FLAGS]		= decode_ifa_flags,
 	[IFA_RT_PRIORITY]	= decode_nla_u32,
 	[IFA_TARGET_NETNSID]	= decode_nla_s32,
+	[IFA_PROTO]		= decode_ifa_proto,
+	[IFA_MC_USERS]		= decode_nla_u32,
 };
 
 DECL_NETLINK_ROUTE_DECODER(decode_ifaddrmsg)
