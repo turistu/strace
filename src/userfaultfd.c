@@ -26,9 +26,11 @@ SYS_FUNC(userfaultfd)
 #include "xlat/uffd_api_flags.h"
 #include "xlat/uffd_continue_mode_flags.h"
 #include "xlat/uffd_copy_flags.h"
+#include "xlat/uffd_move_mode_flags.h"
 #include "xlat/uffd_poison_mode_flags.h"
 #include "xlat/uffd_register_ioctl_flags.h"
 #include "xlat/uffd_register_mode_flags.h"
+#include "xlat/uffd_rwprotect_mode_flags.h"
 #include "xlat/uffd_writeprotect_mode_flags.h"
 #include "xlat/uffd_zeropage_flags.h"
 
@@ -188,6 +190,36 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 		break;
 	}
 
+	case UFFDIO_MOVE: {
+		struct uffdio_move um;
+
+		if (entering(tcp)) {
+			tprints_arg_next_name("argp");
+			if (umove_or_printaddr(tcp, arg, &um))
+				return RVAL_IOCTL_DECODED;
+			tprint_struct_begin();
+			PRINT_FIELD_X(um, dst);
+			tprint_struct_next();
+			PRINT_FIELD_X(um, src);
+			tprint_struct_next();
+			PRINT_FIELD_X(um, len);
+			tprint_struct_next();
+			PRINT_FIELD_FLAGS(um, mode, uffd_move_mode_flags,
+					  "UFFDIO_MOVE_MODE_???");
+
+			return 0;
+		}
+
+		if (!syserror(tcp) && !umove(tcp, arg, &um)) {
+			tprint_struct_next();
+			PRINT_FIELD_X(um, move);
+		}
+
+		tprint_struct_end();
+
+		break;
+	}
+
 	case UFFDIO_WRITEPROTECT: {
 		struct uffdio_writeprotect uwp;
 
@@ -200,6 +232,41 @@ uffdio_ioctl(struct tcb *const tcp, const unsigned int code,
 			PRINT_FIELD_FLAGS(uwp, mode,
 					  uffd_writeprotect_mode_flags,
 					  "UFFDIO_WRITEPROTECT_MODE_???");
+			tprint_struct_end();
+		}
+
+		break;
+	}
+
+	case UFFDIO_RWPROTECT: {
+		struct uffdio_rwprotect urwp;
+
+		tprints_arg_next_name("argp");
+		if (!umove_or_printaddr(tcp, arg, &urwp)) {
+			tprint_struct_begin();
+			PRINT_FIELD_OBJ_PTR(urwp, range,
+					    tprintf_uffdio_range);
+			tprint_struct_next();
+			PRINT_FIELD_FLAGS(urwp, mode,
+					  uffd_rwprotect_mode_flags,
+					  "UFFDIO_RWPROTECT_MODE_???");
+			tprint_struct_end();
+		}
+
+		break;
+	}
+
+	case UFFDIO_SET_MODE: {
+		struct uffdio_set_mode usm;
+
+		tprints_arg_next_name("argp");
+		if (!umove_or_printaddr(tcp, arg, &usm)) {
+			tprint_struct_begin();
+			PRINT_FIELD_FLAGS(usm, enable, uffd_api_features,
+					  "UFFD_FEATURE_???");
+			tprint_struct_next();
+			PRINT_FIELD_FLAGS(usm, disable, uffd_api_features,
+					  "UFFD_FEATURE_???");
 			tprint_struct_end();
 		}
 

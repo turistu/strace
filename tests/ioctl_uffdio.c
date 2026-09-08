@@ -55,8 +55,14 @@ main(void)
 	memset(writeprotect_struct, 0, sizeof(*writeprotect_struct));
 	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_continue, continue_struct);
 	memset(continue_struct, 0, sizeof(*continue_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_move, move_struct);
+	memset(move_struct, 0, sizeof(*move_struct));
 	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_poison, poison_struct);
 	memset(poison_struct, 0, sizeof(*poison_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_rwprotect, rwprotect_struct);
+	memset(rwprotect_struct, 0, sizeof(*rwprotect_struct));
+	TAIL_ALLOC_OBJECT_CONST_PTR(struct uffdio_set_mode, set_mode_struct);
+	memset(set_mode_struct, 0, sizeof(*set_mode_struct));
 
 	struct {
 		unsigned int val;
@@ -74,6 +80,8 @@ main(void)
 		  "{start=0, len=0}" },
 		{ ARG_STR(UFFDIO_COPY), copy_struct,
 		  "{dst=0, src=0, len=0, mode=0}" },
+		{ ARG_STR(UFFDIO_MOVE), move_struct,
+		  "{dst=0, src=0, len=0, mode=0}" },
 		{ ARG_STR(UFFDIO_ZEROPAGE), zero_struct,
 		  "{range={start=0, len=0}, mode=0}" },
 		{ ARG_STR(UFFDIO_WRITEPROTECT), writeprotect_struct,
@@ -82,6 +90,10 @@ main(void)
 		  "{range={start=0, len=0}, mode=0}" },
 		{ ARG_STR(UFFDIO_POISON), poison_struct,
 		  "{range={start=0, len=0}, mode=0}" },
+		{ ARG_STR(UFFDIO_RWPROTECT), rwprotect_struct,
+		  "{range={start=0, len=0}, mode=0}" },
+		{ ARG_STR(UFFDIO_SET_MODE), set_mode_struct,
+		  "{enable=0, disable=0}" },
 	};
 
 	for (unsigned int i = 0; i < ARRAY_SIZE(requests); ++i) {
@@ -112,6 +124,10 @@ main(void)
 		api_struct->ioctls &= ~(1ull<<_UFFDIO_REGISTER|
 					1ull<<_UFFDIO_UNREGISTER|
 					1ull<<_UFFDIO_API);
+		if (api_struct->ioctls & (1ull<<_UFFDIO_SET_MODE)) {
+			printf("|1<<_UFFDIO_SET_MODE");
+			api_struct->ioctls &= ~(1ull<<_UFFDIO_SET_MODE);
+		}
 		if (api_struct->ioctls)
 			printf("|%#" PRIx64, (uint64_t)api_struct->ioctls);
 	}
@@ -162,6 +178,10 @@ main(void)
 			printf("|1<<_UFFDIO_POISON");
 			register_struct->ioctls &= ~(1ull<<_UFFDIO_POISON);
 		}
+		if (register_struct->ioctls & (1ull<<_UFFDIO_RWPROTECT)) {
+			printf("|1<<_UFFDIO_RWPROTECT");
+			register_struct->ioctls &= ~(1ull<<_UFFDIO_RWPROTECT);
+		}
 		if (register_struct->ioctls)
 			printf("|%#" PRIx64, (uint64_t)register_struct->ioctls);
 	}
@@ -190,6 +210,20 @@ main(void)
 	       " mode=UFFDIO_COPY_MODE_DONTWAKE|UFFDIO_COPY_MODE_WP|0xdeadbeec"
 	       "}) = %s\n",
 	       fd, area2, area1, pagesize, errstr);
+
+	/* ---- MOVE ---- */
+	move_struct->dst = (uint64_t)(uintptr_t)area2;
+	move_struct->src = (uint64_t)(uintptr_t)area1;
+	move_struct->len = pagesize;
+	move_struct->mode = UFFDIO_MOVE_MODE_DONTWAKE;
+	rc = sys_ioctl(fd, UFFDIO_MOVE, move_struct);
+	printf("ioctl(%d, UFFDIO_MOVE, {dst=%p, src=%p, len=%#zx"
+	       ", mode=UFFDIO_MOVE_MODE_DONTWAKE",
+	       fd, area2, area1, pagesize);
+	if (rc >= 0)
+		printf(", move=%#llx",
+		       (unsigned long long)(uint64_t) move_struct->move);
+	printf("}) = %s\n", errstr);
 
 	/* ---- ZEROPAGE ---- */
 	madvise(area2, pagesize, MADV_DONTNEED);
@@ -243,6 +277,17 @@ main(void)
 		       (unsigned long long)(uint64_t) continue_struct->mapped);
 	printf("}) = %s\n", errstr);
 
+	continue_struct->mode =
+		UFFDIO_CONTINUE_MODE_DONTWAKE|UFFDIO_CONTINUE_MODE_WP;
+	rc = sys_ioctl(fd, UFFDIO_CONTINUE, continue_struct);
+	printf("ioctl(%d, UFFDIO_CONTINUE, {range={start=%p, len=%#zx}"
+	       ", mode=UFFDIO_CONTINUE_MODE_DONTWAKE|UFFDIO_CONTINUE_MODE_WP",
+	       fd, area2, pagesize);
+	if (rc >= 0)
+		printf(", mapped=%llu",
+		       (unsigned long long)(uint64_t) continue_struct->mapped);
+	printf("}) = %s\n", errstr);
+
 	/* ---- POISON ---- */
 	poison_struct->range.start = (uint64_t)(uintptr_t)area2;
 	poison_struct->range.len = pagesize;
@@ -255,6 +300,25 @@ main(void)
 		printf(", updated=%llu",
 		       (unsigned long long)(uint64_t) poison_struct->updated);
 	printf("}) = %s\n", errstr);
+
+	/* ---- RWPROTECT ---- */
+	rwprotect_struct->range.start = (uint64_t)(uintptr_t)area2;
+	rwprotect_struct->range.len = pagesize;
+	rwprotect_struct->mode =
+		UFFDIO_RWPROTECT_MODE_RWP|UFFDIO_RWPROTECT_MODE_DONTWAKE;
+	sys_ioctl(fd, UFFDIO_RWPROTECT, rwprotect_struct);
+	printf("ioctl(%d, UFFDIO_RWPROTECT, {range={start=%p, len=%#zx}"
+	       ", mode=UFFDIO_RWPROTECT_MODE_RWP"
+	       "|UFFDIO_RWPROTECT_MODE_DONTWAKE}) = %s\n",
+	       fd, area2, pagesize, errstr);
+
+	/* ---- SET_MODE ---- */
+	set_mode_struct->enable = UFFD_FEATURE_RWP_ASYNC;
+	set_mode_struct->disable = 0;
+	sys_ioctl(fd, UFFDIO_SET_MODE, set_mode_struct);
+	printf("ioctl(%d, UFFDIO_SET_MODE"
+	       ", {enable=UFFD_FEATURE_RWP_ASYNC, disable=0}) = %s\n",
+	       fd, errstr);
 
 	puts("+++ exited with 0 +++");
 	return 0;
