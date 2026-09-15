@@ -1,0 +1,1 @@
+../tests/fstat.c

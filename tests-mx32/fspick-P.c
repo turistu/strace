@@ -1,0 +1,1 @@
+../tests/fspick-P.c

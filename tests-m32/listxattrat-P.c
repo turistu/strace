@@ -1,0 +1,1 @@
+../tests/listxattrat-P.c

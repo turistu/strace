@@ -1,0 +1,1 @@
+../tests/ioctl_pidfd_get_info-success.c

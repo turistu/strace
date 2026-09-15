@@ -1,0 +1,1 @@
+../tests/strace--syscall-limit--seccomp-bpf-1.expected

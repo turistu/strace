@@ -1,0 +1,1 @@
+../tests/syscall-success.sh

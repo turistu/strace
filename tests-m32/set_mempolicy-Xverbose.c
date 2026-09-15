@@ -1,0 +1,1 @@
+../tests/set_mempolicy-Xverbose.c
