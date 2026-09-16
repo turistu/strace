@@ -1,0 +1,1 @@
+../tests/prctl-riscv-v-ctrl-success.c

@@ -1,0 +1,1 @@
+../tests/netlink_netlink_diag.c

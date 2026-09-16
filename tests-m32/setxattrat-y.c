@@ -1,0 +1,1 @@
+../tests/setxattrat-y.c

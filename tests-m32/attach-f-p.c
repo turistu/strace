@@ -1,0 +1,1 @@
+../tests/attach-f-p.c

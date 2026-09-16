@@ -1,0 +1,1 @@
+../tests/setresuid.c
