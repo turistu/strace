@@ -23,10 +23,15 @@
 # define sys_chown	SIZEIFY(sys_chown)
 # define sys_fchown	SIZEIFY(sys_fchown)
 # define sys_getgroups	SIZEIFY(sys_getgroups)
+# define sys_getresgid	SIZEIFY(sys_getresgid)
 # define sys_getresuid	SIZEIFY(sys_getresuid)
 # define sys_getuid	SIZEIFY(sys_getuid)
+# define sys_setfsgid	SIZEIFY(sys_setfsgid)
 # define sys_setfsuid	SIZEIFY(sys_setfsuid)
+# define sys_setgid	SIZEIFY(sys_setgid)
 # define sys_setgroups	SIZEIFY(sys_setgroups)
+# define sys_setregid	SIZEIFY(sys_setregid)
+# define sys_setresgid	SIZEIFY(sys_setresgid)
 # define sys_setresuid	SIZEIFY(sys_setresuid)
 # define sys_setreuid	SIZEIFY(sys_setreuid)
 # define sys_setuid	SIZEIFY(sys_setuid)
@@ -67,6 +72,24 @@ SYS_FUNC(setuid)
 {
 	/* uid */
 	tprints_arg_name("uid");
+	printuid(tcp->u_arg[0]);
+
+	return RVAL_DECODED;
+}
+
+SYS_FUNC(setfsgid)
+{
+	/* fsgid */
+	tprints_arg_name("fsgid");
+	printuid(tcp->u_arg[0]);
+
+	return RVAL_DECODED;
+}
+
+SYS_FUNC(setgid)
+{
+	/* gid */
+	tprints_arg_name("gid");
 	printuid(tcp->u_arg[0]);
 
 	return RVAL_DECODED;
@@ -129,6 +152,56 @@ SYS_FUNC(setresuid)
 
 	/* suid */
 	tprints_arg_next_name("suid");
+	printuid(tcp->u_arg[2]);
+
+	return RVAL_DECODED;
+}
+
+SYS_FUNC(getresgid)
+{
+	if (entering(tcp))
+		return 0;
+
+	/* rgid */
+	tprints_arg_name("rgid");
+	get_print_uid(tcp, tcp->u_arg[0]);
+
+	/* egid */
+	tprints_arg_next_name("egid");
+	get_print_uid(tcp, tcp->u_arg[1]);
+
+	/* sgid */
+	tprints_arg_next_name("sgid");
+	get_print_uid(tcp, tcp->u_arg[2]);
+
+	return 0;
+}
+
+SYS_FUNC(setregid)
+{
+	/* rgid */
+	tprints_arg_name("rgid");
+	printuid(tcp->u_arg[0]);
+
+	/* egid */
+	tprints_arg_next_name("egid");
+	printuid(tcp->u_arg[1]);
+
+	return RVAL_DECODED;
+}
+
+SYS_FUNC(setresgid)
+{
+	/* rgid */
+	tprints_arg_name("rgid");
+	printuid(tcp->u_arg[0]);
+
+	/* egid */
+	tprints_arg_next_name("egid");
+	printuid(tcp->u_arg[1]);
+
+	/* sgid */
+	tprints_arg_next_name("sgid");
 	printuid(tcp->u_arg[2]);
 
 	return RVAL_DECODED;
