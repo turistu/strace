@@ -38,10 +38,7 @@ main(int argc, char **argv)
 	static const kernel_ulong_t bogus_arg3 =
 			(kernel_ulong_t) 0xdecafeedbeefda7eULL;
 
-	static const struct {
-		long arg;
-		const char *str;
-	} get_strs[] = {
+	static const struct strival_long get_strs[] = {
 			{-1,       ""},
 			{0,        ""},
 			{1,        " (PR_FP_MODE_FR)"},
@@ -50,10 +47,7 @@ main(int argc, char **argv)
 			{0x20,     ""},
 			{0x20 | 3, " (PR_FP_MODE_FR|PR_FP_MODE_FRE|0x20)"}
 	};
-	static const struct {
-		kernel_ulong_t arg;
-		const char *str;
-	} set_strs[] = {
+	static const struct strval_klong set_strs[] = {
 			{0,        "0"},
 			{1,        "PR_FP_MODE_FR"},
 			{2,        "PR_FP_MODE_FRE"},
@@ -90,7 +84,7 @@ main(int argc, char **argv)
 	rc = do_prctl(PR_GET_FP_MODE, bogus_arg2, bogus_arg3);
 
 	for (size_t i = 0; i < ARRAY_SIZE(get_strs); i++) {
-		if (get_strs[i].arg == rc) {
+		if (get_strs[i].val == rc) {
 			str = get_strs[i].str;
 			break;
 		}
@@ -108,7 +102,7 @@ main(int argc, char **argv)
 
 	/* PR_SET_FP_MODE */
 	for (size_t i = 0; i < ARRAY_SIZE(set_strs); i++) {
-		rc = do_prctl(PR_SET_FP_MODE, set_strs[i].arg, bogus_arg3);
+		rc = do_prctl(PR_SET_FP_MODE, set_strs[i].val, bogus_arg3);
 
 		printf("prctl(PR_SET_FP_MODE, %s) = %s (INJECTED)\n", set_strs[i].str,
 			   sprintrc(rc));

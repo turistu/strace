@@ -44,10 +44,7 @@ main(int argc, char **argv)
 	static const kernel_ulong_t bogus_arg5 =
 			(kernel_ulong_t) 0xfa57beeffacefeedULL;
 
-	static const struct {
-		long arg;
-		const char *str;
-	} get_strs[] = {
+	static const struct strival_long get_strs[] = {
 			{-1,         ""},
 			{0,          ""},
 			{1,          " (PR_MDWE_REFUSE_EXEC_GAIN)"},
@@ -57,10 +54,7 @@ main(int argc, char **argv)
 			{5,          " (PR_MDWE_REFUSE_EXEC_GAIN|0x4)"},
 			{0x7ea1cafc, ""},
 	};
-	static const struct {
-		kernel_ulong_t arg;
-		const char *str;
-	} set_strs[] = {
+	static const struct strval_klong set_strs[] = {
 			{0,          "0"},
 			{1,          "PR_MDWE_REFUSE_EXEC_GAIN"},
 			{2,          "PR_MDWE_NO_INHERIT"},
@@ -106,7 +100,7 @@ main(int argc, char **argv)
 		const char *errstr = sprintrc(rc);
 
 		for (size_t i = 0; i < ARRAY_SIZE(get_strs); i++) {
-			if (get_strs[i].arg == rc) {
+			if (get_strs[i].val == rc) {
 				str = get_strs[i].str;
 				break;
 			}
@@ -131,11 +125,11 @@ main(int argc, char **argv)
 
 	/* PR_SET_FP_MODE */
 	for (size_t i = 0; i < ARRAY_SIZE(set_strs); i++) {
-		rc = do_prctl(PR_SET_MDWE, set_strs[i].arg, 0, 0, 0);
+		rc = do_prctl(PR_SET_MDWE, set_strs[i].val, 0, 0, 0);
 		printf("prctl(PR_SET_MDWE, %s, 0, 0, 0) = %s (INJECTED)\n",
 		       set_strs[i].str, sprintrc(rc));
 
-		rc = do_prctl(PR_SET_MDWE, set_strs[i].arg,
+		rc = do_prctl(PR_SET_MDWE, set_strs[i].val,
 			      bogus_arg3, bogus_arg4, bogus_arg5);
 		printf("prctl(PR_SET_MDWE, %s, %s) = %s (INJECTED)\n",
 		       set_strs[i].str,
