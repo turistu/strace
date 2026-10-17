@@ -1,0 +1,1 @@
+../tests/nsyscalls-d.c

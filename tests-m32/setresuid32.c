@@ -1,0 +1,1 @@
+../tests/setresuid32.c

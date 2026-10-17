@@ -1,0 +1,1 @@
+../tests/sol_tipc-group_join-success-Xverbose.c

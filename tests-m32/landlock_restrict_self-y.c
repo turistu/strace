@@ -1,0 +1,1 @@
+../tests/landlock_restrict_self-y.c

@@ -1,0 +1,1 @@
+../tests/readlinkat.c

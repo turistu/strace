@@ -1,0 +1,1 @@
+../tests/prctl-ppc-dexcr-success.c
