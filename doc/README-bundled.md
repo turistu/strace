@@ -14,9 +14,10 @@ strace bundles a subset of Linux kernel UAPI headers to ensure:
 3. **Forward compatibility** — strace can decode newer kernel features even
    when built on older systems
 
-The bundled headers act as fallback system headers via the build system's
-`-isystem` mechanism. They are used only when the system's kernel headers
-don't provide the necessary definitions or are older than the bundled version.
+The build selects either the bundled or the system kernel headers at
+configure time. When bundled headers are selected, their `-isystem` paths
+precede the compiler's default system include paths; they are not a
+per-header fallback for missing definitions.
 
 ## Directory Structure
 
@@ -74,10 +75,11 @@ When bundled headers are enabled, the build adds `-isystem` flags to
 -isystem <srcdir>/bundled/linux/include/uapi
 ```
 
-The `-isystem` flag means bundled headers are searched as system headers
-(lower priority than quoted includes). Source code uses standard `#include
-<linux/foo.h>` directives; the compiler resolves them to bundled headers
-when the system headers are missing or older.
+The `-isystem` flag adds bundled directories to the system include search
+path, ahead of the compiler's default system directories. Source code uses
+standard `#include <linux/foo.h>` directives; when bundled headers are
+enabled and the requested header is bundled, it is selected regardless of
+whether the system also has that header.
 
 The arch-specific path is searched first, so `#include <asm/fcntl.h>`
 resolves to the bundled arch-specific header on those 9 architectures. Other
@@ -90,9 +92,9 @@ The file `bundled/linux/include/uapi/linux/version.h` tracks the bundled
 kernel version. Example:
 
 ```c
-#define LINUX_VERSION_CODE 459008
+#define LINUX_VERSION_CODE 459520
 #define LINUX_VERSION_MAJOR 7
-#define LINUX_VERSION_PATCHLEVEL 1
+#define LINUX_VERSION_PATCHLEVEL 3
 #define LINUX_VERSION_SUBLEVEL 0
 ```
 
@@ -101,7 +103,7 @@ version during auto-detection.
 
 ## What Is Bundled
 
-Currently bundled (~148 header files, tracking Linux kernel v7.1):
+The bundled headers currently track Linux kernel v7.3 (see `version.h`):
 
 - **Main Linux UAPI headers**: syscall structures, ioctl definitions,
   constants and enums for BPF, io_uring, perf_event, prctl, seccomp,
@@ -119,23 +121,20 @@ headers beyond `fcntl.h`.
 
 ## How to Update Bundled Headers
 
-Updates are done from a `headers_install`-ed kernel tree, not raw kernel
-sources. The `headers_install` target sanitizes headers for userspace use.
+Use [`maint/update-bundled-headers.sh`](../maint/update-bundled-headers.sh)
+with a checked-out Linux kernel source tree. It runs `make headers_install`
+for the generic and bundled architecture-specific headers, applies the
+repository's whitespace normalization, and copies the sanitized headers
+listed in `bundled/Makefile.am` (`EXTRA_DIST`). Do not copy raw kernel
+source headers: `headers_install` prepares them for userspace use.
 
 ### Updating Existing Headers
 
-Typical workflow when syncing with a new kernel release:
+To sync the existing bundled headers with a kernel release:
 
 ```bash
-# Build a headers_install'd kernel tree
-cd /path/to/linux
-make headers_install INSTALL_HDR_PATH=$TMPDIR/kernel-headers
-
-# Copy updated headers to strace
-cd /path/to/strace
-cp $TMPDIR/kernel-headers/include/linux/version.h \
-   bundled/linux/include/uapi/linux/
-...
+# From the strace source tree, with the Linux tree checked out at vX.Y
+maint/update-bundled-headers.sh /path/to/linux
 
 # Verify the build
 ./bootstrap
@@ -144,49 +143,32 @@ make -j$(nproc)
 make check
 ```
 
-For architecture-specific headers:
+To preview which headers would change, use `-n`; the script still runs
+`headers_install` but does not copy files. Use `-j JOBS` to set the number
+of parallel make jobs. `--commit` also creates a commit with a generated
+message; without it, the script only updates the files. Review the diff
+and follow [COMMIT-MESSAGES.md](COMMIT-MESSAGES.md) when committing.
+
+The script installs architecture-specific headers separately with the
+corresponding `ARCH` value. For example, it copies the installed mips
+`asm/fcntl.h` into `bundled/linux/arch/mips/include/uapi/asm/`.
+
+For a single header, you can also install headers manually and copy the
+sanitized file:
 
 ```bash
-# Example: updating asm/fcntl.h for mips
-cp $TMPDIR/kernel-headers/arch/mips/include/asm/fcntl.h \
-   bundled/linux/arch/mips/include/uapi/asm/
-```
-
-**Important**: Always use `headers_install`-ed headers, not raw kernel
-sources. The installation process sanitizes headers for userspace by removing
-kernel-internal definitions and ensuring proper include guards.
-
-### Bulk Update Example
-
-For a kernel version update affecting multiple files:
-
-```bash
-cd /path/to/linux
-git checkout v7.1
-make headers_install INSTALL_HDR_PATH=$TMPDIR/headers-v7.1
-
-cd /path/to/strace
-cd bundled/linux/include/uapi/linux
-for f in *.h; do
-    cp $TMPDIR/headers-v7.1/include/linux/$f .
-done
-cd -
-
-# Test
-make -j$(nproc) && make -j$(nproc) check
+make -C /path/to/linux headers_install INSTALL_HDR_PATH=$TMPDIR/kernel-headers
+cp $TMPDIR/kernel-headers/include/linux/version.h \
+   bundled/linux/include/uapi/linux/
 ```
 
 ## Adding a New Header
 
-When adding a header that strace previously didn't bundle:
+The update script only processes headers already listed in
+`bundled/Makefile.am`. When adding a header that strace previously didn't
+bundle:
 
-1. **Copy from headers_install**:
-   ```bash
-   cp $TMPDIR/kernel-headers/include/linux/pidfd.h \
-      bundled/linux/include/uapi/linux/
-   ```
-
-2. **Register in `bundled/Makefile.am`**:
+1. **Register in `bundled/Makefile.am`**:
    ```makefile
    EXTRA_DIST = \
        linux/COPYING \
@@ -196,6 +178,18 @@ When adding a header that strace previously didn't bundle:
    ```
    Add the new file to the `EXTRA_DIST` list in alphabetical order within
    its section.
+
+2. **Run the update script** to install and copy the listed headers:
+   ```bash
+   maint/update-bundled-headers.sh /path/to/linux
+   ```
+   Alternatively, install and copy only the new header manually:
+   ```bash
+   make -C /path/to/linux headers_install \
+       INSTALL_HDR_PATH=$TMPDIR/kernel-headers
+   cp $TMPDIR/kernel-headers/include/linux/pidfd.h \
+      bundled/linux/include/uapi/linux/
+   ```
 
 3. **Test**:
    ```bash
@@ -263,8 +257,7 @@ The `#From` directive uses kernel-relative paths (e.g.,
 `include/uapi/linux/bpf.h`), not `bundled/` paths. It documents which
 upstream kernel header is the source of truth for these constants.
 
-Additionally, 27 xlat files are auto-generated from enum definitions in
-bundled headers:
+Some xlat files are auto-generated from enum definitions in bundled headers:
 
 ```
 #Generated by maint/enum2xlat.sh from "enum bpf_map_type" in bundled/linux/include/uapi/linux/bpf.h; do not edit.
