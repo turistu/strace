@@ -1,47 +1,40 @@
 /*
- * Check appending auxstr of setns(2) when --namespace=new is given.
+ * Check setns(2) namespace IDs with explicit and zero nstype.
  *
- * Copyright (c) 2024-2025 The strace developers.
+ * Copyright (c) 2024-2026 The strace developers.
  * All rights reserved.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-#include "tests.h"
-#include "scno.h"
+#include "setns-report-ns-id-common.h"
+#include "xmalloc.h"
 
-#include <limits.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
+#include <stdlib.h>
+
+#include <linux/sched.h>
 
 int
 main(void)
 {
-	const char *netns_path = "/proc/self/ns/net";
-	skip_if_unavailable(netns_path);
+	/* Try a user namespace for CAP_SYS_ADMIN before creating the pair. */
+	(void) syscall(__NR_unshare, CLONE_NEWUSER);
 
-	int netns_fd = open(netns_path, O_RDONLY);
-	if (netns_fd < 0)
-		perror_msg_and_skip("open(%s)", netns_path);
-	char netns[PATH_MAX + 1];
-	ssize_t n  = readlink(netns_path, netns, sizeof(netns));
-	if (n < 0)
-		perror_msg_and_fail("readlink: %s", netns_path);
-	else if ((size_t) n >= sizeof(netns))
-		error_msg_and_fail("readlink: %s: result is too large",
-				   netns_path);
-	netns[n] = '\0';
+	char *path = xasprintf("/proc/self/ns/%s", TEST_NS_NAME);
+	char ns[PATH_MAX + 1];
+	int fd = open_namespace_pair(path, TEST_NS_FLAG, TEST_NS_FLAG_STR,
+				     ns, sizeof(ns));
+	free(path);
 
-	if (syscall(__NR_unshare, 0x40000000) < 0)
-		perror_msg_and_skip("unshare (CLONE_NEWNET)");
+	if (setns_and_print_expected(fd, TEST_NS_FLAG, TEST_NS_FLAG_STR, ns) < 0)
+		perror_msg_and_skip("setns(%s)", TEST_NS_FLAG_STR);
 
-	int rc = syscall(__NR_setns, netns_fd, 0x40000000);
-	if (rc < 0)
-		perror_msg_and_skip("setns (CLONE_NEWNET)");
-	printf("setns(%d, CLONE_NEWNET) = %s (%s)\n",
-	       netns_fd, sprintrc(rc), netns);
+	if (syscall(__NR_unshare, TEST_NS_FLAG) < 0)
+		perror_msg_and_skip("unshare(%s)", TEST_NS_FLAG_STR);
+
+	if (setns_and_print_expected(fd, ARG_STR(0), ns) < 0)
+		perror_msg_and_skip("setns(0)");
+	close(fd);
 
 	puts("+++ exited with 0 +++");
 

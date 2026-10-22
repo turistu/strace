@@ -17,6 +17,9 @@ Noteworthy changes in release ?.? (????-??-??)
   * Implemented decoding of landlock_restrict_self flags.
   * Implemented decoding of ZCRX_CTRL_ADD_AREA io_uring zcrx ctrl operation.
   * Implemented decoding of VIDIOC_{UN,}SUBSCRIBE_EVENT ioctl commands.
+  * Enhanced -e namespace=new option to decode setns(2) namespace transitions
+    when nstype is 0.
+  * Implemented decoding of auxiliary clock IDs.
   * Updated lists of ATA_*, KVM_*, NL80211_*, V4L2_*, and *_MAGIC constants.
   * Updated lists of ioctl commands from Linux 7.3.
 
@@ -28,6 +31,15 @@ Noteworthy changes in release ?.? (????-??-??)
     when the declared header length exceeds the available buffer size.
   * Fixed decoding of AF_BRIDGE RTM_GETNEIGH requests, including requests
     with multiple attributes.
+  * Fixed several procfs lookups that used the wrong PID when strace's
+    PID namespace differs from the mounted /proc, affecting -e namespace=new
+    annotations for setns(2) and unshare(2), -Y/--decode-pids=comm process
+    names, and "already traced" attach diagnostics.
+  * Fixed -e namespace=new to report the correct namespace ID for setns(2)
+    and unshare(2) transitions to PID and time namespaces, which affect
+    future children rather than the caller.  An unavailable PID namespace
+    ID after unshare(2) is omitted.
+  * Fixed dynamic clock id decoding.
 
 Noteworthy changes in release 7.2 (2026-08-18)
 ==============================================

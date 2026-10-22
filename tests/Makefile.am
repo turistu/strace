@@ -47,6 +47,8 @@ libselinux_LDADD =
 endif
 
 libtests_a_SOURCES = \
+	clock_ids_for_tests.c \
+	clock_ids_for_tests.h \
 	clock_t_str.c \
 	create_nl_socket.c \
 	create_tmpfile.c \
@@ -651,7 +653,9 @@ MISC_TESTS = \
 	attach-f-p.test \
 	attach-p-cmd.test \
 	attach-p-eperm-already-traced.test \
+	attach-p-eperm-already-traced--pidns.test \
 	attach-p-eperm-signal.test \
+	attach-p-eperm-tracer-outside-pidns.test \
 	attach-p-eperm-yama.test \
 	bexecve.test \
 	clone_ptrace.test \
@@ -781,6 +785,7 @@ check_SCRIPTS = \
 	prctl-success.sh \
 	prctl.sh \
 	print_scno_getcwd.sh \
+	procfs-pidns.sh \
 	qualify_personality.sh \
 	qualify_personality_all.sh \
 	run.sh \
@@ -910,6 +915,7 @@ EXTRA_DIST = \
 	nlattr_ifla_af_inet6.h \
 	nsyscalls.h \
 	print_user_desc.c \
+	printclockname.c \
 	printsignal.c \
 	printxval.c \
 	process_vm_readv_writev.c \
@@ -919,6 +925,10 @@ EXTRA_DIST = \
 	semtimedop-common.c \
 	semtimedop-syscall.c \
 	setfsugid.c \
+	setns-report-ns-id-children.c \
+	setns-report-ns-id-common.h \
+	setns-report-ns-id-user-common.c \
+	setns-report-ns-id.c \
 	setresugid.c \
 	setreugid.c \
 	setugid.c \

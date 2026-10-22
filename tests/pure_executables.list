@@ -671,6 +671,9 @@ pread64-pwrite64
 preadv
 preadv-pwritev
 preadv2-pwritev2
+printclockname-Xabbrev
+printclockname-Xraw
+printclockname-Xverbose
 printpath-umovestr
 printpath-umovestr-peekdata
 printpath-umovestr-undumpable
@@ -798,7 +801,15 @@ setgroups
 setgroups32
 sethostname
 setns
-setns-report-ns-id
+setns-report-ns-id-cgroup
+setns-report-ns-id-ipc
+setns-report-ns-id-mnt
+setns-report-ns-id-net
+setns-report-ns-id-pid
+setns-report-ns-id-time
+setns-report-ns-id-user
+setns-report-ns-id-user-explicit
+setns-report-ns-id-uts
 setregid
 setregid32
 setresgid

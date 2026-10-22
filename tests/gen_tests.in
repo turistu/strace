@@ -52,7 +52,7 @@ chmod--secontext_mismatch	-a28 --secontext=mismatch -e trace=chmod
 chown	-a28
 chown32	-a31
 chroot	-a13
-clock	test_trace_expr 'times|times-.*|fcntl.*' -e/clock
+clock	test_trace_expr 'times|times-.*|fcntl.*|printclockname-.*' -e/clock
 clock_adjtime	-a37
 clock_adjtime64	-a39
 clock_nanosleep	-e trace=clock_nanosleep,clock_gettime
@@ -947,6 +947,9 @@ pread64-pwrite64	-a21 -eread=0 -ewrite=1 -e trace=pread64,pwrite64 -P pread64-pw
 preadv	-a21
 preadv-pwritev	-a19 -eread=0 -ewrite=1 -e trace=preadv,pwritev
 preadv2-pwritev2	-a22 -eread=0 -ewrite=1 -e trace=preadv2,pwritev2
+printclockname-Xabbrev	-a22 -Xabbrev -e trace=clock_getres
+printclockname-Xraw	-a22 -Xraw -e trace=clock_getres
+printclockname-Xverbose	-a22 -Xverbose -e trace=clock_getres
 printpath-umovestr	-a11 -e signal=none -e trace=chdir
 printpath-umovestr-peekdata	-a11 -e signal=none -e trace=chdir
 printpath-umovestr-undumpable	-a11 -e signal=none -e trace=chdir
@@ -1103,7 +1106,24 @@ setgroups	-s2 -a17
 setgroups32	-s2 -a19
 sethostname	-a22
 setns	-a21
-setns-report-ns-id	-a11	-e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-cgroup	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-cgroup--pidns	+procfs-pidns.sh
+setns-report-ns-id-ipc	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-ipc--pidns	+procfs-pidns.sh
+setns-report-ns-id-mnt	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-mnt--pidns	+procfs-pidns.sh
+setns-report-ns-id-net	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-net--pidns	+procfs-pidns.sh
+setns-report-ns-id-pid	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-pid--pidns	+procfs-pidns.sh
+setns-report-ns-id-time	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-time--pidns	+procfs-pidns.sh
+setns-report-ns-id-user	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-user--pidns	+procfs-pidns.sh
+setns-report-ns-id-user-explicit	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-user-explicit--pidns	+procfs-pidns.sh
+setns-report-ns-id-uts	-a12 -e trace=setns -e namespace=new -e signal=none
+setns-report-ns-id-uts--pidns	+procfs-pidns.sh
 setregid	-a15
 setregid32	-a17
 setresgid	-a19
@@ -1209,6 +1229,7 @@ strace--absolute-timestamps-format-unix-precision-s +strace-ttt.test 0 --absolut
 strace--absolute-timestamps-format-unix-precision-us +strace-ttt.test 6 --absolute-timestamps=precision:us --absolute-timestamps=format:unix
 strace--always-show-pid	--always-show-pid --trace=fchdir -a15
 strace--decode-pids-comm	--decode-pids=comm --trace=getppid,tgkill --signal='!SIGCHLD,SIGCONT' -q -f -a 18
+strace--decode-pids-comm--pidns	+procfs-pidns.sh
 strace--follow-forks-output-separately +strace-ff.test --follow-forks --output-separately
 strace--relative-timestamps +strace-r.test --relative-timestamps
 strace--relative-timestamps-ms +strace-r.test --relative-timestamps=ms
@@ -1276,7 +1297,7 @@ times-Xverbose	-esignal=none -e trace=times -Xverbose
 times-fail	-a12 -e trace=times
 tkill	-a12 --signal='!cont'
 tkill--pidns-translation       test_pidns --signal='!cont' -a12 -e trace=tkill
-trace_clock	test_trace_expr 'clock_nanosleep|times|times-.*' -e%clock
+trace_clock	test_trace_expr 'clock_nanosleep|times|times-.*|printclockname-.*' -e%clock
 trace_creds	test_trace_expr '([gs]et[^p]*([gu]id|groups)|caps|prctl|[fl]?chown|print(path-umovestr|strn-umoven)-undumpable|ptrace|quotactl|rt_sigtimedwait|rt_(tg)?sigqueueinfo).*' -e%creds
 trace_fstat	test_trace_expr '' -e%fstat -v -P stat.sample -P /dev/full
 trace_fstatfs	test_trace_expr '' -e%fstatfs
@@ -1289,9 +1310,9 @@ trace_personality_all_x32	+qualify_personality_all.sh x32
 trace_personality_number_32	+qualify_personality.sh 32 "$(${srcdir=.}/print_scno_getcwd.sh)" 'fsync-y|poke'
 trace_personality_number_64	+qualify_personality.sh 64 "$(${srcdir=.}/print_scno_getcwd.sh)" 'fsync-y|poke'
 trace_personality_number_x32	+qualify_personality.sh x32 "$(${srcdir=.}/print_scno_getcwd.sh)" 'fsync-y|poke'
-trace_personality_regex_32	+qualify_personality.sh 32 '/clock.*' 'times|times-.*|fcntl.*'
-trace_personality_regex_64	+qualify_personality.sh 64 '/clock.*' 'times|times-.*|fcntl.*'
-trace_personality_regex_x32	+qualify_personality.sh x32 '/clock.*' 'times|times-.*|fcntl.*'
+trace_personality_regex_32	+qualify_personality.sh 32 '/clock.*' 'times|times-.*|fcntl.*|printclockname-.*'
+trace_personality_regex_64	+qualify_personality.sh 64 '/clock.*' 'times|times-.*|fcntl.*|printclockname-.*'
+trace_personality_regex_x32	+qualify_personality.sh x32 '/clock.*' 'times|times-.*|fcntl.*|printclockname-.*'
 trace_personality_statfs_32	+qualify_personality.sh 32 '%statfs'
 trace_personality_statfs_64	+qualify_personality.sh 64 '%statfs'
 trace_personality_statfs_x32	+qualify_personality.sh x32 '%statfs'
@@ -1314,6 +1335,7 @@ unlink	-a24
 unlinkat	-a35
 unshare	-a11
 unshare-report-ns-id	-a11	-e trace=unshare -e namespace=new
+unshare-report-ns-id--pidns	+procfs-pidns.sh
 userfaultfd	-a15
 ustat	-a33
 utime	-a16
