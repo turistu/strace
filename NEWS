@@ -2,6 +2,11 @@ Noteworthy changes in release ?.? (????-??-??)
 ==============================================
 
 * Improvements
+
+Noteworthy changes in release 7.3 (2026-10-22)
+==============================================
+
+* Improvements
   * Implemented decoding of fchroot syscall.
   * Implemented decoding of SO_RIGHTS_NOTRUNC socket option.
   * Implemented decoding of IFA_MC_USERS and IFA_PROTO netlink attributes.
