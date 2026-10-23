@@ -1,0 +1,1 @@
+../tests/getrandom.c

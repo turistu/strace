@@ -1,0 +1,1 @@
+../tests/strace-k-z.c
