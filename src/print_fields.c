@@ -7,6 +7,7 @@
  */
 
 #include "defs.h"
+#include "hyperlink.h"
 #include "print_fields.h"
 
 void
@@ -98,10 +99,35 @@ tprint_array_index_equal(void)
 }
 
 void
+tprints_syscall_name(const char *name)
+{
+	if (!name) {
+		STRACE_PRINTF("%s", "system call");
+		return;
+	}
+
+	if (hyperlink_mode != HYPERLINK_ALWAYS) {
+		STRACE_PRINTF("%s", name);
+		return;
+	}
+
+	char *url = make_hyperlink_url_for_syscall(name);
+	if (!url) {
+		STRACE_PRINTF("%s", name);
+		return;
+	}
+
+	tprint_hyperlink_begin(url);
+	STRACE_PRINTF("%s", name);
+	tprint_hyperlink_end();
+	free(url);
+}
+
+void
 tprints_arg_begin(const char *name)
 {
 	STRACE_PRINT_COLOR_SEQ(COLOR_SYSCALL);
-	STRACE_PRINTF("%s", name);
+	tprints_syscall_name(name);
 	STRACE_PRINT_COLOR_SEQ(COLOR_PUNCT);
 	STRACE_PRINTS("(");
 	STRACE_PRINT_COLOR_SEQ(COLOR_ARGVAL);
