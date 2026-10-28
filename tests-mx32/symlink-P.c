@@ -1,0 +1,1 @@
+../tests/symlink-P.c

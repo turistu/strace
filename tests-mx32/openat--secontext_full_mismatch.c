@@ -1,0 +1,1 @@
+../tests/openat--secontext_full_mismatch.c
