@@ -135,6 +135,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	clone3-success-Xabbrev \
 	clone3-success-Xraw \
 	clone3-success-Xverbose \
+	clone3_untraced \
 	clone_parent \
 	clone_parent--quiet-exit \
 	clone_parent-q \
@@ -144,6 +145,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	clone_ptrace--quiet-exit \
 	clone_ptrace-q \
 	clone_ptrace-qq \
+	clone_untraced \
 	close_range \
 	count-f \
 	count_unknown \
@@ -151,6 +153,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	count_unknown_mixed \
 	delay \
 	detach-vfork \
+	dyxlat_test \
 	env-i \
 	execve-v \
 	execveat-v \
@@ -427,6 +430,7 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	sleep \
 	sleep-timing \
 	so_peercred--pidns-translation \
+	sockopt-orig_dst-success \
 	sockopt-sol_socket-success \
 	sockopt-sol_socket-success-Xabbrev \
 	sockopt-sol_socket-success-Xraw \
@@ -474,6 +478,9 @@ check_PROGRAMS = $(PURE_EXECUTABLES) \
 	threads-execve-q \
 	threads-execve-qq \
 	threads-execve-qqq \
+	times-inject \
+	times-inject-Xraw \
+	times-inject-Xverbose \
 	tkill--pidns-translation \
 	tracer_ppid_pgid_sid \
 	trie_test \
@@ -558,6 +565,11 @@ endif
 stack_fcall_mangled_SOURCES = stack-fcall-mangled.c \
 	stack-fcall-mangled-0.c stack-fcall-mangled-1.c \
 	stack-fcall-mangled-2.c stack-fcall-mangled-3.c
+
+dyxlat_test_SOURCES = dyxlat_test.c dyxlat_for_tests.c
+dyxlat_test_CPPFLAGS = $(AM_CPPFLAGS) $(CODE_COVERAGE_CPPFLAGS)
+dyxlat_test_CFLAGS = $(AM_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+dyxlat_test_LDADD = $(LDADD) $(CODE_COVERAGE_LIBS)
 
 trie_test_SOURCES = trie_test.c trie_for_tests.c
 trie_test_CPPFLAGS = $(AM_CPPFLAGS) $(CODE_COVERAGE_CPPFLAGS)
@@ -896,6 +908,8 @@ EXTRA_DIST = \
 	attach-p-cmd.h \
 	clock_adjtime-common.c \
 	clock_xettime-common.c \
+	clone_untraced-inject.sh \
+	clone_untraced.sh \
 	cur_audit_arch.h \
 	fadvise.h \
 	fcntl-common.c \
@@ -912,10 +926,13 @@ EXTRA_DIST = \
 	kernel_old_timex.h \
 	kill-on-exit.sh \
 	ksysent.sed \
+	legacy_poke_arg.sh \
 	lstatx.c \
 	nlattr_ifla.h \
 	nlattr_ifla_af_inet6.h \
 	nsyscalls.h \
+	poke_arg.c \
+	poke_arg.sh \
 	print_user_desc.c \
 	printclockname.c \
 	printsignal.c \

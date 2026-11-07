@@ -13,6 +13,7 @@
  */
 
 #include "defs.h"
+#include "filter_seccomp.h"
 #include "get_personality.h"
 #include "mmap_notify.h"
 #include "native_defs.h"
@@ -31,6 +32,9 @@
 
 /* for PR_SET_NAME */
 #include <linux/prctl.h>
+
+/* For CLONE_* */
+#include <linux/sched.h>
 
 /* for __X32_SYSCALL_BIT */
 #include "scno.h"
@@ -299,6 +303,7 @@ decode_socket_subcall(struct tcb *tcp)
 	for (unsigned int i = 0; i < nargs; ++i)
 		tcp->u_arg[i] = (sizeof(uint32_t) == current_wordsize)
 				? ((uint32_t *) (void *) buf)[i] : buf[i];
+	tcp->flags |= TCB_DECODED_SUBCALL;
 }
 #endif /* SYS_socket_subcall */
 
@@ -338,6 +343,7 @@ decode_ipc_subcall(struct tcb *tcp)
 	const unsigned int n = n_args(tcp);
 	for (unsigned int i = 0; i < n; ++i)
 		tcp->u_arg[i] = tcp->u_arg[i + 1];
+	tcp->flags |= TCB_DECODED_SUBCALL;
 }
 #endif /* SYS_ipc_subcall */
 
@@ -430,17 +436,22 @@ print_err(int64_t err, bool negated)
 }
 
 static void
-print_err_ret(kernel_ulong_t ret, unsigned long u_error)
+print_sysret_retval(kernel_ulong_t ret)
 {
-	const char *u_error_str = err_name(u_error);
-
 	tprints_sysret_next("retval");
 	PRINT_VAL_D(ret);
+}
 
-	if (u_error_str) {
+static void
+print_sysret_errno(unsigned long u_error, const char *err_long)
+{
+	const char *err_short = err_name(u_error);
+
+	if (err_short) {
 		tprints_sysret_next("error");
-		tprints_string(u_error_str);
-		tprints_sysret_string("strerror", strerror(u_error));
+		tprints_string(err_short);
+		tprints_sysret_string("strerror",
+				      err_long ?: strerror(u_error));
 	} else {
 		tprints_sysret_next("strerror");
 		tprintf_string("(errno %lu)", u_error);
@@ -457,6 +468,7 @@ static void set_success(struct tcb *, kernel_long_t);
 static int arch_get_scno(struct tcb *);
 static int arch_check_scno(struct tcb *);
 static int arch_set_scno(struct tcb *, kernel_ulong_t);
+static int arch_set_syscall_args(struct tcb *, unsigned int, kernel_ulong_t []);
 static int arch_get_syscall_args(struct tcb *);
 static void arch_get_error(struct tcb *, bool);
 static int arch_set_error(struct tcb *);
@@ -502,6 +514,8 @@ tamper_with_syscall_entering(struct tcb *tcp, unsigned int *signo)
 	if (!recovering(tcp)) {
 		if (opts->data.flags & INJECT_F_SIGNAL)
 			*signo = opts->data.signo;
+		if (opts->data.flags & INJECT_F_POKE_ENTER)
+			poke_tcb(tcp, opts->data.poke_idx, true);
 		if (opts->data.flags & (INJECT_F_ERROR | INJECT_F_RETVAL)) {
 			kernel_long_t scno =
 				(opts->data.flags & INJECT_F_SYSCALL)
@@ -524,8 +538,6 @@ tamper_with_syscall_entering(struct tcb *tcp, unsigned int *signo)
 #endif
 			}
 		}
-		if (opts->data.flags & INJECT_F_POKE_ENTER)
-			poke_tcb(tcp, opts->data.poke_idx, true);
 		if (opts->data.flags & INJECT_F_POKE_EXIT)
 			tcp->flags |= TCB_INJECT_POKE_EXIT;
 		if (opts->data.flags & INJECT_F_DELAY_ENTER)
@@ -617,6 +629,8 @@ syscall_entering_decode(struct tcb *tcp)
 	return 1;
 }
 
+static int sanitize_clone_untraced(struct tcb *tcp);
+
 int
 syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 {
@@ -643,16 +657,22 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 		}
 	}
 
-	if (hide_log(tcp) || !traced(tcp)
-	    || ((tracing_paths || tracing_fds) && !pathtrace_match(tcp))) {
+	const bool skip_output = hide_log(tcp) || !traced(tcp) ||
+		((tracing_paths || tracing_fds) && !pathtrace_match(tcp));
+
+	if (!skip_output && inject(tcp))
+		tamper_with_syscall_entering(tcp, sig);
+
+	/* A replaced syscall cannot create an untraced child. */
+	if (!hide_log(tcp) && seccomp_filtering && !syscall_tampered(tcp) &&
+	    sanitize_clone_untraced(tcp) < 0)
+		error_func_msg("failed to block CLONE_UNTRACED");
+
+	if (skip_output) {
 		tcp->flags |= TCB_FILTERED;
 		return 0;
 	}
-
 	tcp->flags &= ~TCB_FILTERED;
-
-	if (inject(tcp))
-		tamper_with_syscall_entering(tcp, sig);
 
 	if (cflag == CFLAG_ONLY_STATS) {
 		return 0;
@@ -773,16 +793,17 @@ print_injected_note(struct tcb *tcp)
 		tprints_sysret_string("inject", "INJECTED");
 	if (syscall_tampered_delayed(tcp))
 		tprints_sysret_string("delay", "DELAYED");
+	if (syscall_tampered_sanitized(tcp))
+		tprints_sysret_string("sanitize", "SANITIZED");
 }
 
 static void
-print_erestart(const char *err_short, const char *err_long)
+print_erestart(unsigned long u_error, const char *err_long)
 {
 	tprints_sysret_next("retval");
 	tprint_sysret_pseudo_rval();
-	tprints_sysret_next("error");
-	tprints_string(err_short);
-	tprints_sysret_string("strerror", err_long);
+
+	print_sysret_errno(u_error, err_long);
 }
 
 int
@@ -878,7 +899,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 
 	if (raw(tcp)) {
 		if (tcp->u_error) {
-			print_err_ret(tcp->u_rval, tcp->u_error);
+			print_sysret_retval(tcp->u_rval);
+			print_sysret_errno(tcp->u_error, NULL);
 		} else {
 			tprints_sysret_next("retval");
 			PRINT_VAL_X(tcp->u_rval);
@@ -906,13 +928,13 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 			 * The system call will be restarted with the same arguments
 			 * if SA_RESTART is set; otherwise, it will fail with EINTR.
 			 */
-			print_erestart("ERESTARTSYS", "To be restarted if SA_RESTART is set");
+			print_erestart(tcp->u_error, "To be restarted if SA_RESTART is set");
 			break;
 		case ERESTARTNOINTR:
 			/* Rare. For example, fork() returns this if interrupted.
 			 * SA_RESTART is ignored (assumed set): the restart is unconditional.
 			 */
-			print_erestart("ERESTARTNOINTR", "To be restarted");
+			print_erestart(tcp->u_error, "To be restarted");
 			break;
 		case ERESTARTNOHAND:
 			/* pause(), rt_sigsuspend() etc use this code.
@@ -922,7 +944,7 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 			 * after SIG_IGN or SIG_DFL signal it will restart
 			 * (thus the name "restart only if has no handler").
 			 */
-			print_erestart("ERESTARTNOHAND", "To be restarted if no handler");
+			print_erestart(tcp->u_error, "To be restarted if no handler");
 			break;
 		case ERESTART_RESTARTBLOCK:
 			/* Syscalls like nanosleep(), poll() which can't be
@@ -936,10 +958,11 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 			 * which in turn saves another such restart block,
 			 * old data is lost and restart becomes impossible)
 			 */
-			print_erestart("ERESTART_RESTARTBLOCK", "Interrupted by signal");
+			print_erestart(tcp->u_error, "Interrupted by signal");
 			break;
 		default:
-			print_err_ret(tcp->u_rval, tcp->u_error);
+			print_sysret_retval(tcp->u_rval);
+			print_sysret_errno(tcp->u_error, NULL);
 			break;
 		}
 	} else {
@@ -1047,7 +1070,9 @@ void
 syscall_exiting_finish(struct tcb *tcp)
 {
 	tcp->flags &= ~(TCB_INSYSCALL | TCB_TAMPERED | TCB_INJECT_DELAY_EXIT |
-			TCB_INJECT_POKE_EXIT | TCB_TAMPERED_DELAYED | TCB_TAMPERED_POKED);
+			TCB_INJECT_POKE_EXIT | TCB_TAMPERED_DELAYED |
+			TCB_TAMPERED_POKED | TCB_DECODED_SUBCALL |
+			TCB_TAMPERED_SANITIZED);
 	tcp->sys_func_rval = 0;
 	free_tcb_priv_data(tcp);
 
@@ -1125,11 +1150,6 @@ ptrace_syscall_info_is_exit(void)
 #endif
 
 #include "getregs_old.h"
-#ifdef HAVE_GETREGS_OLD
-/* Either getregs_old() or set_regs() */
-# undef ARCH_MIGHT_USE_SET_REGS
-# define ARCH_MIGHT_USE_SET_REGS 0
-#endif
 
 #undef ptrace_getregset_or_getregs
 #undef ptrace_setregset_or_setregs
@@ -1206,6 +1226,9 @@ ptrace_setregs(pid_t pid)
 #endif /* ARCH_REGS_FOR_GETREGSET || ARCH_REGS_FOR_GETREGS */
 
 static long get_regs_error = -1;
+#ifdef HAVE_GETREGS_OLD
+static int use_getregs_old;
+#endif
 
 void
 clear_regs(struct tcb *tcp)
@@ -1227,7 +1250,6 @@ get_regs(struct tcb *const tcp)
 	 * Try PTRACE_GETREGSET/PTRACE_GETREGS first,
 	 * fallback to getregs_old.
 	 */
-	static int use_getregs_old;
 	if (use_getregs_old < 0) {
 		return get_regs_error = ptrace_getregset_or_getregs(tcp->pid);
 	} else if (use_getregs_old == 0) {
@@ -1586,6 +1608,54 @@ set_scno(struct tcb *tcp, kernel_ulong_t scno)
 	return arch_set_scno(tcp, scno);
 }
 
+/*
+ * Returns:
+ * 1: PTRACE_SET_SYSCALL_INFO succeeded
+ * 0: arch_set_syscall_args succeeded
+ * -1: failed
+ */
+int
+set_syscall_args(struct tcb *tcp, unsigned int arg_mask,
+		 kernel_ulong_t args[MAX_ARGS])
+{
+	/*
+	 * Setting syscall arguments on exiting syscall is not supported
+	 * by PTRACE_SET_SYSCALL_INFO and is not properly defined on all
+	 * architectures.
+	 */
+	if (exiting(tcp))
+		return -1;
+
+	for (unsigned int i = 0; i < MAX_ARGS; ++i) {
+		if (arg_mask & (1U << i))
+			args[i] = truncate_kulong_to_current_klongsize(args[i]);
+	}
+
+	int rc;
+	if (ptrace_set_syscall_info_supported &&
+	    ptrace_syscall_info_is_entry()) {
+		for (unsigned int i = 0; i < MAX_ARGS; ++i) {
+			if (arg_mask & (1U << i))
+				ptrace_sci.entry.args[i] = args[i];
+		}
+		const size_t size = sizeof(ptrace_sci);
+		if (ptrace(PTRACE_SET_SYSCALL_INFO, tcp->pid,
+			   (void *) size, &ptrace_sci) != 0)
+			return -1;
+		rc = 1;
+	} else {
+		if (arch_set_syscall_args(tcp, arg_mask, args) != 0)
+			return -1;
+		rc = 0;
+	}
+
+	for (unsigned int i = 0; i < MAX_ARGS; ++i) {
+		if (arg_mask & (1U << i))
+			tcp->u_arg[i] = args[i];
+	}
+	return rc;
+}
+
 static void
 set_error(struct tcb *tcp, unsigned long new_error)
 {
@@ -1628,6 +1698,49 @@ set_error(struct tcb *tcp, unsigned long new_error)
 			get_error(tcp, !(tcp_sysent(tcp)->sys_flags &
 					 SYSCALL_NEVER_FAILS));
 	}
+}
+
+/* Keep a child from inheriting our seccomp filter without ptrace. */
+static int
+sanitize_clone_untraced(struct tcb *tcp)
+{
+	switch (tcp_sysent(tcp)->sen) {
+	case SEN_clone: {
+#if defined S390 || defined S390X
+		const unsigned int flags_arg = 1;
+#else
+		const unsigned int flags_arg = 0;
+#endif
+		const kernel_ulong_t flags = tcp->u_arg[flags_arg];
+		if (!(flags & CLONE_UNTRACED))
+			return 0;
+		tcp->u_arg[flags_arg] = flags & ~CLONE_UNTRACED;
+		if (set_syscall_args(tcp, 1U << flags_arg, tcp->u_arg) < 0) {
+			tcp->u_arg[flags_arg] = flags;
+			return -1;
+		}
+		tcp->flags |= TCB_TAMPERED_SANITIZED;
+		break;
+	}
+	case SEN_clone3: {
+		uint64_t flags;
+		static_assert(offsetof(struct clone_args, flags) == 0,
+			      "clone3 flags must be the first field");
+		if (tcp->u_arg[1] < sizeof(flags) ||
+		    umove(tcp, tcp->u_arg[0], &flags) < 0 ||
+		    !(flags & CLONE_UNTRACED))
+			return 0;
+		flags &= ~((uint64_t) CLONE_UNTRACED);
+		if (upoken(tcp, tcp->u_arg[0], sizeof(flags), &flags) != sizeof(flags))
+			return -1;
+		invalidate_umove_cache();
+		tcp->flags |= TCB_TAMPERED_SANITIZED;
+		break;
+	}
+	default:
+		break;
+	}
+	return 0;
 }
 
 static void
@@ -1675,6 +1788,7 @@ set_success(struct tcb *tcp, kernel_long_t new_rval)
 #include "check_scno.c"
 #include "set_scno.c"
 #include "get_syscall_args.c"
+#include "set_syscall_args.c"
 #ifndef ptrace_getregset_or_getregs
 # include "get_syscall_result.c"
 #endif

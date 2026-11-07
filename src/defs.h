@@ -373,6 +373,9 @@ struct tcb {
 						 * attached.
 						 */
 # define TCP_AFTER_KVM_RUN		0x80000	/* The process has returned from KVM_RUN ioctl */
+/* Current syscall arguments were transformed by successful subcall decoding. */
+# define TCB_DECODED_SUBCALL		0x100000
+# define TCB_TAMPERED_SANITIZED		0x200000 /* A syscall has been sanitized */
 
 /* qualifier flags */
 # define QUAL_TRACE	0x001	/* this system call should be traced */
@@ -403,6 +406,8 @@ struct tcb {
 # define syscall_tampered_poked(tcp)	((tcp)->flags & TCB_TAMPERED_POKED)
 # define syscall_tampered_nofail(tcp) ((tcp)->flags & TCB_TAMPERED_NO_FAIL)
 # define has_seccomp_filter(tcp)	((tcp)->flags & TCB_SECCOMP_FILTER)
+# define decoded_subcall(tcp)	((tcp)->flags & TCB_DECODED_SUBCALL)
+# define syscall_tampered_sanitized(tcp) ((tcp)->flags & TCB_TAMPERED_SANITIZED)
 
 extern const struct_sysent stub_sysent;
 # define tcp_sysent(tcp) (tcp->s_ent ?: &stub_sysent)
@@ -698,8 +703,15 @@ struct finfo {
 	struct {
 		unsigned int major, minor;
 
-		/* Use only when major == 5, minor == 2 (/dev/ptmx) */
-		int tty_index;
+		union {
+			/* Use only when major == 5, minor == 2 (/dev/ptmx) */
+			int tty_index;
+			/*
+			 * Use only when major == 10, minor == tun_minor
+			 * (/dev/net/tun)
+			 */
+			char tun_backend[16]; /* IFNAMSIZ */
+		};
 	} dev;
 };
 
@@ -843,6 +855,10 @@ extern void invalidate_umove_cache(void);
 extern int upeek(struct tcb *tcp, unsigned long, kernel_ulong_t *);
 extern int upoke(struct tcb *tcp, unsigned long, kernel_ulong_t);
 
+extern int
+set_syscall_args(struct tcb *, unsigned int arg_mask,
+		 kernel_ulong_t args[MAX_ARGS]);
+
 # if HAVE_ARCH_GETRVAL2
 extern long getrval2(struct tcb *);
 # endif
@@ -896,12 +912,6 @@ extern enum sock_proto getfdproto(struct tcb *, int);
 extern const char *xlookup(const struct xlat *, const uint64_t);
 extern const char *xlookup_le(const struct xlat *, uint64_t *);
 extern uint64_t xrlookup(const struct xlat *, const char *, uint64_t);
-
-struct dyxlat;
-struct dyxlat *dyxlat_alloc(size_t nmemb, enum xlat_type type);
-void dyxlat_free(struct dyxlat *);
-const struct xlat *dyxlat_get(const struct dyxlat *);
-void dyxlat_add_pair(struct dyxlat *, uint64_t val, const char *str, size_t len);
 
 const struct xlat *genl_families_xlat(struct tcb *tcp);
 
@@ -1318,6 +1328,9 @@ printfd_with_finfo(struct tcb *tcp, int fd, const struct finfo *finfo)
 	printfd_pid_with_finfo(tcp, tcp->pid, fd, finfo);
 }
 
+extern void print_assoc_type_string(const char *type, const char *str,
+				    size_t len, bool deleted);
+
 /**
  * Helper function, converts pid to string, or to "self" for pid == 0.
  * Uses static buffer for operation.
@@ -1379,6 +1392,7 @@ extern int
 decode_sockaddr(struct tcb *, kernel_ulong_t addr, int addrlen);
 
 extern void printuid(const unsigned int);
+extern void printgid(const unsigned int);
 
 extern void
 print_sigset_addr_len(struct tcb *, kernel_ulong_t addr, kernel_ulong_t len);

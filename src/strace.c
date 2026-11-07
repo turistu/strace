@@ -522,13 +522,13 @@ Stop condition:\n\
 Tampering:\n\
   -e inject=SET[:error=ERRNO|:retval=VALUE][:signal=SIG][:syscall=SYSCALL]\n\
             [:delay_enter=DELAY][:delay_exit=DELAY]\n\
-            [:poke_enter=@argN=DATAN,@argM=DATAM...]\n\
-            [:poke_exit=@argN=DATAN,@argM=DATAM...]\n\
+            [:poke_enter=@argN=DATAN,argN=VAL...]\n\
+            [:poke_exit=@argN=DATAN...]\n\
             [:when=WHEN],\n\
   --inject=SET[:error=ERRNO|:retval=VALUE][:signal=SIG][:syscall=SYSCALL]\n\
            [:delay_enter=DELAY][:delay_exit=DELAY]\n\
-           [:poke_enter=@argN=DATAN,@argM=DATAM...]\n\
-           [:poke_exit=@argN=DATAN,@argM=DATAM...]\n\
+           [:poke_enter=@argN=DATAN,argN=VAL...]\n\
+           [:poke_exit=@argN=DATAN...]\n\
            [:when=WHEN],\n\
                  perform syscall tampering for the syscalls in SET\n\
      delay:      microseconds or NUMBER{s|ms|us|ns}\n\
@@ -862,17 +862,6 @@ set_current_tcp(const struct tcb *tcp)
 		set_personality(current_tcp->currpers);
 }
 
-static void
-print_comm_str(const char *str, const size_t len)
-{
-	if (!len)
-		return;
-	tprint_associated_info_begin();
-	print_quoted_string_ex(str, len,
-			       QUOTE_OMIT_LEADING_TRAILING_QUOTES, "<>");
-	tprint_associated_info_end();
-}
-
 void
 printleader(struct tcb *tcp)
 {
@@ -919,7 +908,7 @@ printleader(struct tcb *tcp)
 			tprintf_string("pid %5u", tcp->pid);
 		}
 
-		print_comm_str(tcp->comm, len);
+		print_assoc_type_string("pid_info", tcp->comm, len, false);
 
 		if (!print_pid_pfx)
 			tprint_attribute_end();
@@ -1059,7 +1048,7 @@ print_pid_comm(int pid)
 {
 	char buf[PROC_COMM_LEN];
 	load_pid_comm(pid, buf, sizeof(buf));
-	print_comm_str(buf, strlen(buf));
+	print_assoc_type_string("pid_info", buf, strlen(buf), false);
 }
 
 void
@@ -3191,7 +3180,7 @@ init(int argc, char *argv[])
 
 	debug_msg("ptrace_setoptions = %#x", ptrace_setoptions);
 	test_ptrace_seize();
-	if (inject_set)
+	if (inject_set || (seccomp_filtering && followfork))
 		test_ptrace_set_syscall_info();
 	test_ptrace_get_syscall_info();
 

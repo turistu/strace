@@ -78,6 +78,7 @@ clone3-success
 clone3-success-Xabbrev
 clone3-success-Xraw
 clone3-success-Xverbose
+clone3_untraced
 clone_parent
 clone_parent--quiet-exit
 clone_parent-q
@@ -87,6 +88,7 @@ clone_ptrace--quiet-attach
 clone_ptrace--quiet-exit
 clone_ptrace-q
 clone_ptrace-qq
+clone_untraced
 close_range
 copy_file_range
 count-f
@@ -102,7 +104,10 @@ dev--decode-fds-dev
 dev--decode-fds-none
 dev--decode-fds-path
 dev--decode-fds-socket
+dev-pty-kcmp-yy
 dev-pty-yy
+dev-tun-unconfigured-yy
+dev-tun-yy
 dev-yy
 dup
 dup-P
@@ -124,6 +129,7 @@ dup3
 dup3-P
 dup3-y
 dup3-yy
+dyxlat_test
 env-i
 epoll_create
 epoll_create1
@@ -830,6 +836,21 @@ pkey_free
 pkey_mprotect
 poke
 poke-sendfile
+poke_arg_a1a6v_max32
+poke_arg_a1a6v_max64
+poke_arg_a1a6v_neg
+poke_arg_a1v_badfd
+poke_arg_a2a6v_max32
+poke_arg_a2a6v_max64
+poke_arg_a2a6v_neg
+poke_arg_a2v_zero
+poke_arg_a3v_badfd
+poke_arg_a4v_zero
+poke_arg_a5v_a2m
+poke_arg_a5v_error
+poke_arg_a5v_len
+poke_arg_a5v_retval
+poke_arg_a6v_zero
 poll
 poll-P
 ppoll
@@ -1189,6 +1210,8 @@ sockaddr_xlat-Xraw-y
 sockaddr_xlat-Xverbose
 sockaddr_xlat-Xverbose-y
 socketcall
+sockopt-orig_dst
+sockopt-orig_dst-success
 sockopt-sol_netlink
 sockopt-sol_socket
 sockopt-sol_socket-Xabbrev
@@ -1294,6 +1317,9 @@ times-Xabbrev
 times-Xraw
 times-Xverbose
 times-fail
+times-inject
+times-inject-Xraw
+times-inject-Xverbose
 tkill
 tkill--pidns-translation
 tracer_ppid_pgid_sid

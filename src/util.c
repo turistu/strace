@@ -219,27 +219,53 @@ ilog10(uint64_t val)
 	return ret;
 }
 
+static void
+print_ticks_comment(uint64_t val, long freq, unsigned int precision,
+		    bool negative)
+{
+	uint64_t scale = 1;
+
+	for (unsigned int i = 0; i < precision; ++i)
+		scale *= 10;
+
+	uint64_t sec = val / freq;
+	const uint64_t scaled_rem = val % freq * scale;
+	uint64_t frac = scaled_rem / freq;
+	const uint64_t double_rem = scaled_rem % freq * 2;
+
+	/* Round the fractional second, with ties to even.  */
+	if (double_rem > (uint64_t) freq
+	    || (double_rem == (uint64_t) freq
+		/* No fraction when scale == 1; round the seconds.  */
+		&& ((scale == 1 ? sec : frac) & 1)))
+		++frac;
+	sec += frac / scale;
+
+	if (precision)
+		tprintf_comment("%s%" PRIu64 ".%0*" PRIu64 " s",
+				negative ? "-" : "", sec, precision, frac % scale);
+	else
+		tprintf_comment("%s%" PRIu64 " s", negative ? "-" : "", sec);
+}
+
 void
 print_ticks(uint64_t val, long freq, unsigned int precision)
 {
 	PRINT_VAL_U(val);
 	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_RAW
-	    && freq > 0 && val > 0) {
-		tprintf_comment("%" PRIu64 ".%0*" PRIu64 " s",
-				val / freq, precision, val % freq);
-	}
+	    && freq > 0 && val > 0)
+		print_ticks_comment(val, freq, precision, false);
 }
 
 void
 print_ticks_d(int64_t val, long freq, unsigned int precision)
 {
 	PRINT_VAL_D(val);
-	/* freq > 1 to avoid special casing for val ==  */
 	if (xlat_verbose(xlat_verbosity) != XLAT_STYLE_RAW
 	    && freq > 1 && val != 0) {
-		tprintf_comment("%s%lld.%0*lld s",
-				val < 0 ? "-" : "", llabs(val / freq),
-				precision, llabs(val % freq));
+		const uint64_t magnitude = val < 0 ? -(uint64_t) val : (uint64_t) val;
+
+		print_ticks_comment(magnitude, freq, precision, val < 0);
 	}
 }
 
@@ -256,8 +282,8 @@ print_clock_t(uint64_t val)
 			debug_func_perror_msg("sysconf(_SC_CLK_TCK)");
 		if (clk_tck == 0)
 			clk_tck = -1;
-		if (clk_tck > 0)
-			frac_width = MIN(ilog10(clk_tck), 9);
+		if (clk_tck > 1)
+			frac_width = MIN(ilog10(clk_tck - 1) + 1, 9);
 	}
 
 	print_ticks(val, clk_tck, frac_width);
@@ -625,7 +651,7 @@ getfdinode(struct tcb *tcp, int fd)
 }
 
 static void
-print_string_in_angle_brackets(const char *str)
+print_fd_info_type_string(const char *type, const char *str)
 {
 	tprint_associated_info_begin();
 	tprints_string(str);
@@ -640,7 +666,7 @@ printsocket(struct tcb *tcp, int fd, const char *path)
 		return false;
 
 	const char *details = get_sockaddr_by_inode(tcp, fd, inode);
-	print_string_in_angle_brackets(details ?: path);
+	print_fd_info_type_string("socket", details ?: path);
 
 	return true;
 }
@@ -716,6 +742,70 @@ scan_fdinfo(pid_t pid_of_fd, int fd, const char *search_pfx,
 				 ARRAY_SIZE(fdinfo_lines)) > 0;
 }
 
+#ifndef TUN_MINOR
+# define TUN_MINOR 200
+#endif
+
+static int
+get_misc_minor(const char *dev_name)
+{
+	FILE *f = fopen_stream("/proc/misc", "r");
+	if (!f)
+		return -1;
+
+	char *line = NULL;
+	size_t sz = 0;
+	int res_minor = -1;
+
+	while (getline(&line, &sz, f) > 0) {
+		unsigned int minor;
+		char name[64];
+
+		if (sscanf(line, "%u %63s", &minor, name) == 2
+		    && strcmp(name, dev_name) == 0) {
+			res_minor = (int) minor;
+			break;
+		}
+	}
+
+	free(line);
+	fclose(f);
+	return res_minor;
+}
+
+static bool
+is_tun(const struct finfo *finfo)
+{
+	static int tun_minor = -1;
+	static bool tun_minor_initialized = false;
+
+	if (finfo->type != FINFO_DEV_CHR || finfo->dev.major != 10)
+		return false;
+
+	if (!tun_minor_initialized) {
+		tun_minor = get_misc_minor("tun");
+		if (tun_minor < 0)
+			tun_minor = TUN_MINOR;
+		tun_minor_initialized = true;
+	}
+
+	return (int) finfo->dev.minor == tun_minor;
+}
+
+static bool
+set_tun_backend(const char *value, void *data)
+{
+	struct finfo *finfo = data;
+	size_t len = strcspn(value, " \t\r\n");
+
+	if (len >= sizeof(finfo->dev.tun_backend))
+		len = sizeof(finfo->dev.tun_backend) - 1;
+
+	memcpy(finfo->dev.tun_backend, value, len);
+	finfo->dev.tun_backend[len] = '\0';
+	return true;
+}
+
 static bool
 is_ptmx(const struct finfo *finfo)
 {
@@ -770,17 +860,23 @@ get_finfo_for_dev(pid_t pid, int fd, const char *path, struct finfo *finfo)
 		finfo->dev.tty_index = -1;
 		scan_fdinfo(pid, fd, prefix, sizeof(prefix) - 1,
 			    set_tty_index, finfo);
+	} else if (is_tun(finfo)) {
+		static const char prefix[] = "iff:\t";
+
+		finfo->dev.tun_backend[0] = '\0';
+		scan_fdinfo(pid, fd, prefix, sizeof(prefix) - 1,
+			    set_tun_backend, finfo);
 	}
 
 	return finfo;
 }
 
 static bool
-printdev(struct tcb *tcp, int fd, const char *path, const struct finfo *finfo)
+printdev(pid_t pid, int fd, const char *path, const struct finfo *finfo)
 {
 	struct finfo finfo_buf;
 	if (!finfo)
-		finfo = get_finfo_for_dev(tcp->pid, fd, path, &finfo_buf);
+		finfo = get_finfo_for_dev(pid, fd, path, &finfo_buf);
 
 	switch (finfo->type) {
 	case FINFO_DEV_BLK:
@@ -795,6 +891,13 @@ printdev(struct tcb *tcp, int fd, const char *path, const struct finfo *finfo)
 			       finfo->dev.major, finfo->dev.minor);
 		if (is_ptmx(finfo) && finfo->dev.tty_index >= 0)
 			tprintf_string(" @/dev/pts/%d", finfo->dev.tty_index);
+		else if (is_tun(finfo) && finfo->dev.tun_backend[0]) {
+			tprints_string(" @");
+			print_quoted_string_ex(
+				finfo->dev.tun_backend,
+				strlen(finfo->dev.tun_backend),
+				QUOTE_OMIT_LEADING_TRAILING_QUOTES, "<>");
+		}
 		tprint_associated_info_end();
 		tprint_associated_info_end();
 		return true;
@@ -845,7 +948,7 @@ printpidfd(pid_t pid_of_fd, int fd, const char *path)
 		printpid(NULL, pid, PT_TID);
 		tprint_associated_info_end();
 	} else {
-		print_string_in_angle_brackets(path);
+		print_fd_info_type_string("pidfd", path);
 	}
 
 	return true;
@@ -988,16 +1091,20 @@ printeventfd(pid_t pid_of_fd, int fd, const char *path)
 		tprint_struct_end();
 		tprint_associated_info_end();
 	} else
-		print_string_in_angle_brackets(path);
+		print_fd_info_type_string("eventfd", path);
 
 	return true;
 }
 
-static void
-print_quoted_string_in_angle_brackets(const char *str, const bool deleted)
+void
+print_assoc_type_string(const char *type, const char *str, const size_t len,
+			const bool deleted)
 {
+	if (!len)
+		return;
+
 	tprint_associated_info_begin();
-	print_quoted_string_ex(str, strlen(str),
+	print_quoted_string_ex(str, len,
 			       QUOTE_OMIT_LEADING_TRAILING_QUOTES, "<>");
 	tprint_associated_info_end();
 
@@ -1019,7 +1126,7 @@ printfd_pid_with_finfo(struct tcb *tcp, pid_t pid, int fd, const struct finfo *f
 		    printsocket(tcp, fd, path))
 			goto printed;
 		if (is_number_in_set(DECODE_FD_DEV, decode_fd_set) &&
-		    printdev(tcp, fd, path, finfo))
+		    printdev(pid, fd, path, finfo))
 			goto printed;
 		if (is_number_in_set(DECODE_FD_EVENTFD, decode_fd_set) &&
 		    printeventfd(pid, fd, path))
@@ -1031,8 +1138,8 @@ printfd_pid_with_finfo(struct tcb *tcp, pid_t pid, int fd, const struct finfo *f
 		    printsignalfd(pid, fd, path))
 			goto printed;
 		if (is_number_in_set(DECODE_FD_PATH, decode_fd_set))
-			print_quoted_string_in_angle_brackets(path,
-							      finfo? finfo->deleted: deleted);
+			print_assoc_type_string("fd_info", path, strlen(path),
+						finfo? finfo->deleted: deleted);
 printed:	;
 	}
 

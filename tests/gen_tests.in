@@ -62,12 +62,14 @@ clone3	-a16
 clone3-Xabbrev	-a16 -Xabbrev  -e trace=clone3
 clone3-Xraw	-a16 -Xraw     -e trace=clone3
 clone3-Xverbose	-a16 -Xverbose -e trace=clone3
+clone3-report-ns-id	--trace=clone3 -a35 --namespace=new
 clone3-success	-einject=clone3:retval=42 -etrace=clone3 -a10
 clone3-success-Xabbrev	-einject=clone3:retval=42 -etrace=clone3 -a16 -Xabbrev
 clone3-success-Xraw	-einject=clone3:retval=42 -etrace=clone3 -a16 -Xraw
 clone3-success-Xverbose	-einject=clone3:retval=42 -etrace=clone3 -a16 -Xverbose
+clone3_untraced	+clone_untraced.sh
+clone3_untraced-inject	+clone_untraced-inject.sh
 clone_parent +clone_ptrace.test
-clone3-report-ns-id	--trace=clone3 -a35 --namespace=new
 clone_parent--quiet-exit +clone_ptrace.test --quiet=exit,personality
 clone_parent-q +clone_ptrace.test -q
 clone_parent-qq +clone_ptrace.test -qq
@@ -75,6 +77,8 @@ clone_ptrace--quiet-attach +clone_ptrace.test --quiet=attach,personality
 clone_ptrace--quiet-exit +clone_ptrace.test --quiet=exit,personality
 clone_ptrace-q +clone_ptrace.test -q
 clone_ptrace-qq +clone_ptrace.test -qq
+clone_untraced	+clone_untraced.sh
+clone_untraced-inject	+clone_untraced-inject.sh
 close_range	-a21 7>>/dev/full
 copy_file_range
 creat	-a16
@@ -84,7 +88,10 @@ dev--decode-fds-dev	-a30 -e trace=openat,fsync -P "/dev/full" -P "/dev/zero" -P 
 dev--decode-fds-none	-a9 -e trace=openat,fsync -P "/dev/full" -P "/dev/zero" -P "/dev/sda" --decode-fds=none
 dev--decode-fds-path	-a19 -e trace=openat,fsync -P "/dev/full" -P "/dev/zero" -P "/dev/sda" -e decode-fds=path
 dev--decode-fds-socket	-a9 -e trace=openat,fsync -P "/dev/full" -P "/dev/zero" -P "/dev/sda" --decode-fds=socket
+dev-pty-kcmp-yy require_min_kernel_version_or_skip 4.14; run_strace_match_diff -e trace=kcmp -e signal=none -yy
 dev-pty-yy require_min_kernel_version_or_skip 4.14; run_strace_match_diff -a30 -e trace=close -P "/dev/ptmx" -yy
+dev-tun-unconfigured-yy -a30 -e trace=close -P "/dev/net/tun" -yy
+dev-tun-yy require_min_kernel_version_or_skip 3.14; run_strace_match_diff -a30 -e trace=close -P "/dev/net/tun" -yy
 dev-yy	-a30 -e trace=openat,fsync -P "/dev/full" -P "/dev/zero" -P "/dev/sda" -yy
 dup	-a7 9>>/dev/full
 dup-P	-a7 --trace=dup -P /dev/full 9>>/dev/full
@@ -106,6 +113,7 @@ dup3	-a13 7>>/dev/full
 dup3-P	-a13 --trace=dup3 -P /dev/full 7>>/dev/full
 dup3-y	-a15 --trace=dup3 -y 7>>/dev/full
 dup3-yy	-a15 --trace=dup3 -yy 7>>/dev/full
+dyxlat_test	run_prog
 epoll_create	-a17
 epoll_create1	-a28
 epoll_ctl
@@ -765,6 +773,62 @@ nlattr_tcamsg-Xraw		+netlink_sock_diag.test -Xraw
 nlattr_tcamsg-Xverbose		+netlink_sock_diag.test -Xverbose
 nlattr_tcmsg			+netlink_sock_diag.test
 nlattr_unix_diag_msg		+netlink_sock_diag.test
+no_getregset_clone3_untraced	+legacy_poke_arg.sh
+no_getregset_clone_untraced	+legacy_poke_arg.sh
+no_getregset_poke_arg_a1v_badfd	+legacy_poke_arg.sh
+no_getregset_poke_arg_a2v_zero	+legacy_poke_arg.sh
+no_getregset_poke_arg_a3v_badfd	+legacy_poke_arg.sh
+no_getregset_poke_arg_a4v_zero	+legacy_poke_arg.sh
+no_getregset_poke_arg_a5v_a2m	+legacy_poke_arg.sh
+no_getregset_poke_arg_a5v_error	+legacy_poke_arg.sh
+no_getregset_poke_arg_a5v_len	+legacy_poke_arg.sh
+no_getregset_poke_arg_a5v_retval	+legacy_poke_arg.sh
+no_getregset_poke_arg_a6v_zero	+legacy_poke_arg.sh
+no_getsi_clone3_untraced	+legacy_poke_arg.sh
+no_getsi_clone_untraced	+legacy_poke_arg.sh
+no_getsi_poke_arg_a1a6v_max32	+legacy_poke_arg.sh
+no_getsi_poke_arg_a1a6v_max64	+legacy_poke_arg.sh
+no_getsi_poke_arg_a1a6v_neg	+legacy_poke_arg.sh
+no_getsi_poke_arg_a1v_badfd	+legacy_poke_arg.sh
+no_getsi_poke_arg_a2a6v_max32	+legacy_poke_arg.sh
+no_getsi_poke_arg_a2a6v_max64	+legacy_poke_arg.sh
+no_getsi_poke_arg_a2a6v_neg	+legacy_poke_arg.sh
+no_getsi_poke_arg_a2v_zero	+legacy_poke_arg.sh
+no_getsi_poke_arg_a3v_badfd	+legacy_poke_arg.sh
+no_getsi_poke_arg_a4v_zero	+legacy_poke_arg.sh
+no_getsi_poke_arg_a5v_a2m	+legacy_poke_arg.sh
+no_getsi_poke_arg_a5v_error	+legacy_poke_arg.sh
+no_getsi_poke_arg_a5v_len	+legacy_poke_arg.sh
+no_getsi_poke_arg_a5v_retval	+legacy_poke_arg.sh
+no_getsi_poke_arg_a6v_zero	+legacy_poke_arg.sh
+no_setregset_clone3_untraced	+legacy_poke_arg.sh
+no_setregset_clone_untraced	+legacy_poke_arg.sh
+no_setregset_poke_arg_a1v_badfd	+legacy_poke_arg.sh
+no_setregset_poke_arg_a2v_zero	+legacy_poke_arg.sh
+no_setregset_poke_arg_a3v_badfd	+legacy_poke_arg.sh
+no_setregset_poke_arg_a4v_zero	+legacy_poke_arg.sh
+no_setregset_poke_arg_a5v_a2m	+legacy_poke_arg.sh
+no_setregset_poke_arg_a5v_error	+legacy_poke_arg.sh
+no_setregset_poke_arg_a5v_len	+legacy_poke_arg.sh
+no_setregset_poke_arg_a5v_retval	+legacy_poke_arg.sh
+no_setregset_poke_arg_a6v_zero	+legacy_poke_arg.sh
+no_setsi_clone3_untraced	+legacy_poke_arg.sh
+no_setsi_clone_untraced	+legacy_poke_arg.sh
+no_setsi_poke_arg_a1a6v_max32	+legacy_poke_arg.sh
+no_setsi_poke_arg_a1a6v_max64	+legacy_poke_arg.sh
+no_setsi_poke_arg_a1a6v_neg	+legacy_poke_arg.sh
+no_setsi_poke_arg_a1v_badfd	+legacy_poke_arg.sh
+no_setsi_poke_arg_a2a6v_max32	+legacy_poke_arg.sh
+no_setsi_poke_arg_a2a6v_max64	+legacy_poke_arg.sh
+no_setsi_poke_arg_a2a6v_neg	+legacy_poke_arg.sh
+no_setsi_poke_arg_a2v_zero	+legacy_poke_arg.sh
+no_setsi_poke_arg_a3v_badfd	+legacy_poke_arg.sh
+no_setsi_poke_arg_a4v_zero	+legacy_poke_arg.sh
+no_setsi_poke_arg_a5v_a2m	+legacy_poke_arg.sh
+no_setsi_poke_arg_a5v_error	+legacy_poke_arg.sh
+no_setsi_poke_arg_a5v_len	+legacy_poke_arg.sh
+no_setsi_poke_arg_a5v_retval	+legacy_poke_arg.sh
+no_setsi_poke_arg_a6v_zero	+legacy_poke_arg.sh
 old_mmap	-a11 -e trace=mmap
 old_mmap-P	-e trace=mmap -P "/dev/full" 9>>/dev/full
 old_mmap-Xabbrev	-a11 -e trace=mmap -Xabbrev
@@ -830,6 +894,21 @@ pipe2	-a15
 pkey_alloc	-a17
 pkey_free	-a13
 pkey_mprotect	-a37
+poke_arg_a1a6v_max32	+poke_arg.sh
+poke_arg_a1a6v_max64	+poke_arg.sh
+poke_arg_a1a6v_neg	+poke_arg.sh
+poke_arg_a1v_badfd	+poke_arg.sh
+poke_arg_a2a6v_max32	+poke_arg.sh
+poke_arg_a2a6v_max64	+poke_arg.sh
+poke_arg_a2a6v_neg	+poke_arg.sh
+poke_arg_a2v_zero	+poke_arg.sh
+poke_arg_a3v_badfd	+poke_arg.sh
+poke_arg_a4v_zero	+poke_arg.sh
+poke_arg_a5v_a2m	+poke_arg.sh
+poke_arg_a5v_error	+poke_arg.sh
+poke_arg_a5v_len	+poke_arg.sh
+poke_arg_a5v_retval	+poke_arg.sh
+poke_arg_a6v_zero	+poke_arg.sh
 poke-sendfile	--inject=all:poke_enter=@arg3=0000000000000000:poke_exit=@arg3=ffffffffffffffff --trace=/sendfile
 ppoll				-s2
 ppoll-P				-s2 -e trace=ppoll -P /dev/full 9>>/dev/full
@@ -1174,6 +1253,8 @@ sockaddr_xlat-Xraw-y		-Xraw -y -e trace=connect -a22 </dev/null 7>/dev/zero
 sockaddr_xlat-Xverbose	-Xverbose -e trace=connect -a22
 sockaddr_xlat-Xverbose-y	-Xverbose -y -e trace=connect -a22 </dev/null 7>/dev/zero
 socketcall	-a20
+sockopt-orig_dst		-e trace=getsockopt
+sockopt-orig_dst-success	-einject=getsockopt:retval=42 -etrace=getsockopt
 sockopt-sol_netlink	-e trace=getsockopt,setsockopt
 sockopt-sol_socket			-e trace=getsockopt,setsockopt
 sockopt-sol_socket-Xabbrev		-e trace=getsockopt,setsockopt -Xabbrev
@@ -1295,6 +1376,9 @@ times-Xabbrev	-esignal=none -e trace=times -Xabbrev
 times-Xraw	-esignal=none -e trace=times -Xraw
 times-Xverbose	-esignal=none -e trace=times -Xverbose
 times-fail	-a12 -e trace=times
+times-inject	-einject=times:retval=42 -etrace=times -a0
+times-inject-Xraw	-einject=times:retval=42 -etrace=times -a0 -Xraw
+times-inject-Xverbose	-einject=times:retval=42 -etrace=times -a0 -Xverbose
 tkill	-a12 --signal='!cont'
 tkill--pidns-translation       test_pidns --signal='!cont' -a12 -e trace=tkill
 trace_clock	test_trace_expr 'clock_nanosleep|times|times-.*|printclockname-.*' -e%clock
