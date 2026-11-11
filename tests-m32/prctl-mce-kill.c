@@ -1,0 +1,1 @@
+../tests/prctl-mce-kill.c

@@ -1,0 +1,1 @@
+../tests/rmdir.c

@@ -1,0 +1,1 @@
+../tests/printclockname-Xabbrev.c

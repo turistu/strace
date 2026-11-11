@@ -1,0 +1,1 @@
+../tests/setfsuid32.c

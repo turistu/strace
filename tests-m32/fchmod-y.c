@@ -1,0 +1,1 @@
+../tests/fchmod-y.c

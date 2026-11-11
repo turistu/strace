@@ -1,0 +1,1 @@
+../tests/fanotify_init.c

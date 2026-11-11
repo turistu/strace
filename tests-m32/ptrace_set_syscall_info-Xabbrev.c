@@ -1,0 +1,1 @@
+../tests/ptrace_set_syscall_info-Xabbrev.c
