@@ -801,7 +801,7 @@ static void
 print_erestart(unsigned long u_error, const char *err_long)
 {
 	tprints_sysret_next("retval");
-	tprint_sysret_pseudo_rval();
+	tprint_sysret_interrupted();
 
 	print_sysret_errno(u_error, err_long);
 }
@@ -1001,6 +1001,19 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 					PRINT_VAL_U(tcp->u_rval);
 				}
 				break;
+			case RVAL_UID:
+			case RVAL_GID: {
+				unsigned long long id =
+					zero_extend_signed_to_ull(tcp->u_rval);
+#if ANY_WORDSIZE_LESS_THAN_KERNEL_LONG
+				if (current_klongsize < sizeof(tcp->u_rval))
+					id = (unsigned int) id;
+#endif
+				bool uid = (sys_res & RVAL_MASK) == RVAL_UID;
+				tprints_object_type(uid ? "uid" : "gid");
+				tprintf_object_field_string("raw", "%llu", id);
+				break;
+			}
 			case RVAL_FD:
 				/*
 				 * printfd accepts int as fd and it makes

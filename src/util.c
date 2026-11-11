@@ -428,13 +428,12 @@ printaddr64(const uint64_t addr)
 	if (!addr)
 		tprint_null();
 	else
-		PRINT_VAL_X(addr);
+		PRINT_VAL_ADDR(addr);
 }
 
-#define DEF_PRINTNUM(name, type) \
+#define DEF_PRINTNUM(name, type, fmt) \
 bool									\
-printnum_ ## name(struct tcb *const tcp, const kernel_ulong_t addr,	\
-		  const char *const fmt)				\
+printnum_ ## name(struct tcb *const tcp, const kernel_ulong_t addr)	\
 {									\
 	type num;							\
 	if (umove_or_printaddr(tcp, addr, &num))			\
@@ -474,11 +473,15 @@ printpair_ ## name(struct tcb *const tcp, const kernel_ulong_t addr,	\
 	return true;							\
 }
 
-DEF_PRINTNUM(int, int)
+DEF_PRINTNUM(int_d, int, "%d")
+DEF_PRINTNUM(int_u, int, "%u")
+DEF_PRINTNUM(int_x, int, "%#x")
 DEF_PRINTNUM_ADDR(int, unsigned int)
 DEF_PRINTPAIR(int, int)
-DEF_PRINTNUM(short, short)
-DEF_PRINTNUM(int64, uint64_t)
+DEF_PRINTNUM(short_u, short, "%hu")
+DEF_PRINTNUM(int64_d, uint64_t, "%" PRId64)
+DEF_PRINTNUM(int64_u, uint64_t, "%" PRIu64)
+DEF_PRINTNUM(int64_x, uint64_t, "%#" PRIx64)
 DEF_PRINTNUM_ADDR(int64, uint64_t)
 DEF_PRINTPAIR(int64, uint64_t)
 
@@ -1115,7 +1118,7 @@ print_assoc_type_string(const char *type, const char *str, const size_t len,
 void
 printfd_pid_with_finfo(struct tcb *tcp, pid_t pid, int fd, const struct finfo *finfo)
 {
-	PRINT_VAL_D(fd);
+	PRINT_VAL_FD(fd);
 
 	char patha[PATH_MAX + 1];
 	bool deleted;
@@ -2067,6 +2070,8 @@ print_array_ex(struct tcb *const tcp,
 			break;
 		}
 
+		tprint_object_begin();
+
 		if (flags & PAF_PRINT_INDICES) {
 			tprint_array_index_begin();
 
@@ -2085,6 +2090,8 @@ print_array_ex(struct tcb *const tcp,
 
 		if (flags & PAF_PRINT_INDICES)
 			tprint_array_index_end();
+
+		tprint_object_end();
 
 		if (break_needed) {
 			cur = end_addr;

@@ -469,6 +469,8 @@ extern const struct xlat whence_codes[];
 # define RVAL_SID	012	/* session ID */
 # define RVAL_TGID	013	/* thread group ID */
 # define RVAL_PGID	014	/* process group ID */
+# define RVAL_UID	015	/* user ID */
+# define RVAL_GID	016	/* group ID */
 # define RVAL_MASK	017	/* mask for these values */
 
 # define RVAL_STR	020	/* Print `auxstr' field after return val */
@@ -1814,6 +1816,7 @@ extern void printleader(struct tcb *);
 extern void line_ended(void);
 extern void tabto(void);
 extern void tprintf_string(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
+extern void tvprintf(const char *fmt, va_list args) ATTRIBUTE_FORMAT((printf, 1, 0));
 extern void tprints_string(const char *str);
 extern bool tprints_string_uncol(const char *str);
 extern void tprintf_comment(const char *fmt, ...) ATTRIBUTE_FORMAT((printf, 1, 2));
@@ -1846,13 +1849,16 @@ printaddr_comment(const kernel_ulong_t addr)
 
 # define DECL_PRINTNUM(name)						\
 extern bool								\
-printnum_ ## name(struct tcb *, kernel_ulong_t addr, const char *fmt)	\
-	ATTRIBUTE_FORMAT((printf, 3, 0))				\
+printnum_ ## name(struct tcb *, kernel_ulong_t addr)			\
 /* End of DECL_PRINTNUM definition. */
 
-DECL_PRINTNUM(short);
-DECL_PRINTNUM(int);
-DECL_PRINTNUM(int64);
+DECL_PRINTNUM(int_d);
+DECL_PRINTNUM(int_u);
+DECL_PRINTNUM(int_x);
+DECL_PRINTNUM(short_u);
+DECL_PRINTNUM(int64_d);
+DECL_PRINTNUM(int64_u);
+DECL_PRINTNUM(int64_x);
 # undef DECL_PRINTNUM
 
 # define DECL_PRINTNUM_ADDR(name)					\
@@ -1873,15 +1879,15 @@ printnum_pid(struct tcb *const tcp, const kernel_ulong_t addr, enum pid_type typ
 static inline bool
 printnum_slong(struct tcb *tcp, kernel_ulong_t addr)
 {
-	return dispatch_wordsize(printnum_int64, printnum_int,
-				 tcp, addr, opt_wordsize("%" PRId64, "%d"));
+	return dispatch_wordsize(printnum_int64_d, printnum_int_d,
+				 tcp, addr);
 }
 
 static inline bool
 printnum_ulong(struct tcb *tcp, kernel_ulong_t addr)
 {
-	return dispatch_wordsize(printnum_int64, printnum_int,
-				 tcp, addr, opt_wordsize("%" PRIu64, "%u"));
+	return dispatch_wordsize(printnum_int64_u, printnum_int_u,
+				 tcp, addr);
 }
 
 static inline bool
