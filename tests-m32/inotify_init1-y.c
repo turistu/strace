@@ -1,0 +1,1 @@
+../tests/inotify_init1-y.c

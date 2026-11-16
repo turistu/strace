@@ -1,0 +1,1 @@
+../tests/mincore.c

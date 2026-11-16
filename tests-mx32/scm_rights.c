@@ -1,0 +1,1 @@
+../tests/scm_rights.c

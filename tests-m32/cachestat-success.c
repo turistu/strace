@@ -1,0 +1,1 @@
+../tests/cachestat-success.c
