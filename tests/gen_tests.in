@@ -197,10 +197,10 @@ fcntl64--pidns-translation	test_pidns -a8 -e trace=fcntl64
 fdatasync	-a14
 file_getattr	-a33
 file_getattr-P	-a33 --trace=file_getattr -P /dev/full
-file_getattr-success	-a33 --inject=file_getattr:retval=42 --trace=file_getattr
-file_getattr-success-Xabbrev	-a33 --inject=file_getattr:retval=42 --trace=file_getattr -Xabbrev
-file_getattr-success-Xraw	-a33 --inject=file_getattr:retval=42 --trace=file_getattr -Xraw
-file_getattr-success-Xverbose	-a33 --inject=file_getattr:retval=42 --trace=file_getattr -Xverbose
+file_getattr-success	--inject=file_getattr:retval=42 --trace=file_getattr -a33
+file_getattr-success-Xabbrev	--inject=file_getattr:retval=42 --trace=file_getattr -Xabbrev -a33
+file_getattr-success-Xraw	--inject=file_getattr:retval=42 --trace=file_getattr -Xraw -a33
+file_getattr-success-Xverbose	--inject=file_getattr:retval=42 --trace=file_getattr -Xverbose -a33
 file_getattr-y	-a34 --trace=file_getattr -y
 file_getattr-yy	-a34 --trace=file_getattr -yy
 file_handle	-e trace=name_to_handle_at,open_by_handle_at
@@ -1055,6 +1055,7 @@ process_vm_readv--pidns-translation	test_pidns -s5 -a37 -e trace=process_vm_read
 process_vm_writev	-s5 -a38
 process_vm_writev--pidns-translation	test_pidns -s5 -a38 -e trace=process_vm_writev
 pselect6
+pselect6-success	--inject=/^pselect6:retval=2 --trace=/^pselect6 -a36
 pselect6_time64
 ptrace	-a23 -s64 -e signal=none
 ptrace-Xabbrev	-a23 -s64 -e signal=none -e trace=ptrace -Xabbrev
@@ -1378,6 +1379,7 @@ times-Xabbrev	-esignal=none -e trace=times -Xabbrev
 times-Xraw	-esignal=none -e trace=times -Xraw
 times-Xverbose	-esignal=none -e trace=times -Xverbose
 times-fail	-a12 -e trace=times
+times-fail-N	-a16 -e trace=times -N
 times-inject	-einject=times:retval=42 -etrace=times -a0
 times-inject-Xraw	-einject=times:retval=42 -etrace=times -a0 -Xraw
 times-inject-Xverbose	-einject=times:retval=42 -etrace=times -a0 -Xverbose

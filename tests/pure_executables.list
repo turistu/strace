@@ -711,6 +711,7 @@ process_mrelease-y
 process_vm_readv
 process_vm_writev
 pselect6
+pselect6-success
 pselect6_time64
 ptrace
 ptrace-Xabbrev
@@ -934,6 +935,7 @@ times-Xabbrev
 times-Xraw
 times-Xverbose
 times-fail
+times-fail-N
 tkill
 truncate
 truncate64
@@ -971,6 +973,7 @@ xattr
 xattr-strings
 xet_robust_list
 xet_thread_area_x86
+xet_thread_area_x86-N
 xetitimer
 xetpgid
 xetpriority
