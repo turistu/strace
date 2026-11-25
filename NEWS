@@ -12,6 +12,12 @@ Noteworthy changes in release ?.? (????-??-??)
   * Implemented printing of network interface name for /dev/net/tun in -yy mode.
   * Implemented decoding of SO_ORIGINAL_DST and IP6T_SO_ORIGINAL_DST socket
     options.
+  * Implemented decoding of extended io_uring registered buffer updates.
+  * Updated decoding of struct perf_event_attr.
+  * Implemented decoding of BPF_PROG_STREAM_OPEN.
+  * Updated decoding of BPF struct_ops queries and links, program stream IDs,
+    and eBPF unwind instruction selectors.
+  * Updated lists of IORING_* and PERF_* constants.
 
 * Bug fixes
   * Fixed a tracing failure during process termination caused by mistaking

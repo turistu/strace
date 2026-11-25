@@ -262,7 +262,7 @@ struct BPF_PROG_QUERY_struct /* query */ {
 	uint32_t attach_flags;
 	uint64_t ATTRIBUTE_ALIGNED(8) prog_ids;
 	uint32_t prog_cnt;
-	uint32_t pad_; /* skip check */
+	uint32_t type_id;
 	uint64_t ATTRIBUTE_ALIGNED(8) prog_attach_flags;
 	uint64_t ATTRIBUTE_ALIGNED(8) link_ids;
 	uint64_t ATTRIBUTE_ALIGNED(8) link_attach_flags;
@@ -462,6 +462,8 @@ struct bpf_link_info_struct {
 		} xdp;
 		struct {
 			uint32_t map_id;
+			uint32_t pad_; /* skip check */
+			uint64_t ATTRIBUTE_ALIGNED(8) cgroup_id;
 		} struct_ops;
 		struct {
 			uint32_t pf;
@@ -572,7 +574,10 @@ struct BPF_MAP_LOOKUP_BATCH_struct /* batch */ {
 # define BPF_MAP_DELETE_BATCH_struct_size BPF_MAP_LOOKUP_BATCH_struct_size
 
 struct BPF_LINK_CREATE_struct /* link_create */ {
-	uint32_t prog_fd;
+	union {
+		uint32_t prog_fd;
+		uint32_t map_fd;
+	};
 	union {
 		uint32_t target_fd;
 		uint32_t target_ifindex;
@@ -761,5 +766,15 @@ struct BPF_PROG_ASSOC_STRUCT_OPS_struct {
 # define BPF_PROG_ASSOC_STRUCT_OPS_struct_size \
 	offsetofend(struct BPF_PROG_ASSOC_STRUCT_OPS_struct, prog_assoc_struct_ops)
 # define expected_BPF_PROG_ASSOC_STRUCT_OPS_struct_size 12
+
+struct BPF_PROG_STREAM_OPEN_struct /* prog_stream_open */ {
+	uint32_t prog_fd;
+	uint32_t stream_id;
+	uint32_t flags;
+};
+
+# define BPF_PROG_STREAM_OPEN_struct_size \
+	sizeof(struct BPF_PROG_STREAM_OPEN_struct)
+# define expected_BPF_PROG_STREAM_OPEN_struct_size 12
 
 #endif /* !STRACE_BPF_ATTR_H */

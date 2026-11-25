@@ -82,6 +82,7 @@ union bpf_attr_data {
 	BPF_ATTR_DATA_FIELD(BPF_TOKEN_CREATE);
 	BPF_ATTR_DATA_FIELD(BPF_PROG_STREAM_READ_BY_FD);
 	BPF_ATTR_DATA_FIELD(BPF_PROG_ASSOC_STRUCT_OPS);
+	BPF_ATTR_DATA_FIELD(BPF_PROG_STREAM_OPEN);
 	char char_data[256];
 };
 
@@ -750,7 +751,7 @@ unsigned char *signature_ptr;
 #if VERBOSE
 # define INSNS_FMT \
 	"[{code=BPF_JMP|BPF_K|BPF_EXIT, dst_reg=BPF_REG_10" \
-	", src_reg=0xb /* BPF_REG_??? */, off=%d, imm=%#x}]"
+	", src_reg=0xb /* BPF_??? */, off=%d, imm=%#x}]"
 # define INSNS_ARG insns[0].off, insns[0].imm
 #else
 # define INSNS_FMT "%p"
@@ -850,6 +851,51 @@ print_BPF_PROG_LOAD_attr_signature(const struct bpf_attr_check *check,
 	       ", signature_size=%zu, keyring_id=123",
 	       (unsigned int) ARRAY_SIZE(insns), INSNS_ARG,
 	       license, sizeof(signature_data));
+}
+
+static const struct bpf_insn selector_insns[] = {
+	{ .code = BPF_JMP | BPF_JCOND, .src_reg = BPF_MAY_GOTO },
+	{ .code = BPF_JMP | BPF_JCOND, .src_reg = BPF_UNWIND_GOTO },
+	{ .code = BPF_JMP | BPF_JCOND, .src_reg = 2 },
+	{ .code = BPF_JMP | BPF_EXIT, .src_reg = 0 },
+	{ .code = BPF_JMP | BPF_EXIT, .src_reg = BPF_UNWIND_EXIT },
+	{ .code = BPF_JMP | BPF_EXIT, .src_reg = 2 },
+	{ .code = BPF_ALU64 | BPF_MOV, .src_reg = BPF_REG_1 },
+};
+
+static void
+init_BPF_PROG_LOAD_selectors(struct bpf_attr_check *check, size_t idx)
+{
+	check->data.BPF_PROG_LOAD_data.insns =
+		(uintptr_t) &selector_insns[idx];
+}
+
+static void
+print_BPF_PROG_LOAD_selectors(const struct bpf_attr_check *check,
+			      unsigned long addr, size_t idx)
+{
+	printf("prog_type=BPF_PROG_TYPE_UNSPEC, insn_cnt=1, insns=");
+#if VERBOSE
+	static const char *const codes[] = {
+		"BPF_JMP|BPF_K|BPF_JCOND",
+		"BPF_JMP|BPF_K|BPF_JCOND",
+		"BPF_JMP|BPF_K|BPF_JCOND",
+		"BPF_JMP|BPF_K|BPF_EXIT",
+		"BPF_JMP|BPF_K|BPF_EXIT",
+		"BPF_JMP|BPF_K|BPF_EXIT",
+		"BPF_ALU64|BPF_K|BPF_MOV",
+	};
+	static const char *const selectors[] = {
+		"BPF_MAY_GOTO", "BPF_UNWIND_GOTO", "0x2 /* BPF_??? */",
+		"BPF_REG_0", "BPF_UNWIND_EXIT", "0x2 /* BPF_??? */",
+		"BPF_REG_1",
+	};
+	printf("[{code=%s, dst_reg=BPF_REG_0, src_reg=%s, off=0, imm=0}]",
+	       codes[idx], selectors[idx]);
+#else
+	printf("%p", &selector_insns[idx]);
+#endif
+	printf(", license=NULL");
 }
 
 static_assert(ARRAY_SIZE(bpf_prog_types_xdata) == 33,
@@ -1175,6 +1221,13 @@ static struct bpf_attr_check BPF_PROG_LOAD_checks[] = {
 		       ", keyring_id=-1"
 	},
 	{ /* 12 */
+		.data = { .BPF_PROG_LOAD_data = { .insn_cnt = 1 } },
+		.size = offsetofend(struct BPF_PROG_LOAD_struct, license),
+		.iters = ARRAY_SIZE(selector_insns),
+		.init_fn = init_BPF_PROG_LOAD_selectors,
+		.print_fn = print_BPF_PROG_LOAD_selectors,
+	},
+	{ /* 13 */
 		.data = { .BPF_PROG_LOAD_data = {
 			.insn_cnt = ARRAY_SIZE(insns),
 			.keyring_id = 123
@@ -1630,7 +1683,7 @@ print_BPF_PROG_QUERY_attr6(const struct bpf_attr_check *check,
 	printf("query={target_fd=-1153374643"
 	       ", attach_type=0xfeedface /* BPF_??? */"
 	       ", query_flags=BPF_F_QUERY_EFFECTIVE|0xdeadf00c"
-	       ", attach_flags=0xbeefca80 /* BPF_F_??? */"
+	       ", attach_flags=0xbeefca80 /* BPF_F_??? */, type_id=0"
 #if defined(INJECT_RETVAL)
 	       ", prog_ids=[0, 1, 4294967295, 2718281828], prog_cnt=4"
 	       ", prog_attach_flags=[BPF_F_ALLOW_OVERRIDE"
@@ -1660,7 +1713,7 @@ print_BPF_PROG_QUERY_attr7(const struct bpf_attr_check *check,
 {
 	printf("query={target_ifindex=3735928559"
 	       ", attach_type=BPF_TCX_INGRESS"
-	       ", query_flags=0, attach_flags=0"
+	       ", query_flags=0, attach_flags=0, type_id=0"
 	       ", prog_ids=NULL, prog_cnt=4"
 	       ", prog_attach_flags=NULL"
 #if defined(INJECT_RETVAL)
@@ -1780,6 +1833,56 @@ static struct bpf_attr_check BPF_PROG_QUERY_checks[] = {
 		.size = offsetofend(struct BPF_PROG_QUERY_struct, revision),
 		.init_fn = init_BPF_PROG_QUERY_attr7,
 		.print_fn = print_BPF_PROG_QUERY_attr7,
+	},
+	{
+		.data = { .BPF_PROG_QUERY_data = {
+			.target_fd = -1,
+			.attach_type = BPF_STRUCT_OPS,
+			.type_id = 0xfeedbeef,
+		} },
+		.size = offsetof(struct BPF_PROG_QUERY_struct, type_id),
+		.str = "query={target_fd=-1, attach_type=BPF_STRUCT_OPS"
+		       ", query_flags=0, attach_flags=0"
+		       ", prog_ids=NULL, prog_cnt=0}",
+	},
+	{
+		.data = { .BPF_PROG_QUERY_data = {
+			.target_fd = -1,
+			.attach_type = BPF_STRUCT_OPS,
+			.type_id = -1U,
+		} },
+		.size = offsetof(struct BPF_PROG_QUERY_struct, type_id) + 1,
+		.str = "query={target_fd=-1, attach_type=BPF_STRUCT_OPS"
+		       ", query_flags=0, attach_flags=0, type_id="
+#ifdef WORDS_BIGENDIAN
+		       "4278190080"
+#else
+		       "255"
+#endif
+		       ", prog_ids=NULL, prog_cnt=0}",
+	},
+	{
+		.data = { .BPF_PROG_QUERY_data = {
+			.target_fd = -1,
+			.attach_type = BPF_STRUCT_OPS,
+			.type_id = 0xfeedbeef,
+		} },
+		.size = offsetofend(struct BPF_PROG_QUERY_struct, type_id),
+		.str = "query={target_fd=-1, attach_type=BPF_STRUCT_OPS"
+		       ", query_flags=0, attach_flags=0, type_id=4276993775"
+		       ", prog_ids=NULL, prog_cnt=0}",
+	},
+	{
+		.data = { .BPF_PROG_QUERY_data = {
+			.target_fd = -1,
+			.attach_type = BPF_STRUCT_OPS,
+			.type_id = 0xfeedbeef,
+		} },
+		.size = BPF_PROG_QUERY_struct_size,
+		.str = "query={target_fd=-1, attach_type=BPF_STRUCT_OPS"
+		       ", query_flags=0, attach_flags=0, type_id=4276993775"
+		       ", prog_ids=NULL, prog_cnt=0, prog_attach_flags=NULL"
+		       ", link_ids=NULL, link_attach_flags=NULL, revision=0}",
 	},
 };
 
@@ -2096,8 +2199,9 @@ print_BPF_LINK_CREATE_attr1(const struct bpf_attr_check *check,
 {
 	uint32_t attach_type = check->data.BPF_LINK_CREATE_data.attach_type;
 
-	printf("link_create={prog_fd=-1, %s, attach_type=%s"
+	printf("link_create={%s=-1, %s, attach_type=%s"
 	       ", flags=BPF_F_REPLACE}",
+	       attach_type == BPF_STRUCT_OPS ? "map_fd" : "prog_fd",
 	       attach_type_is_ifindex(attach_type) ?
 		"target_ifindex=3735928559" : "target_fd=-559038737",
 	       sprintxval(bpf_attach_type, idx, "BPF_???"));
@@ -2135,6 +2239,7 @@ static const uint8_t special_attach_types[] = {
 	34 /* BPF_CGROUP_INET_SOCK_RELEASE */,
 	41 /* BPF_PERF_EVENT */,
 	42 /* BPF_TRACE_KPROBE_MULTI */,
+	44 /* BPF_STRUCT_OPS */,
 	45 /* BPF_NETFILTER */,
 	46 /* BPF_TCX_INGRESS */,
 	47 /* BPF_TCX_EGRESS */,
@@ -2805,6 +2910,56 @@ static struct bpf_attr_check BPF_LINK_CREATE_checks[] = {
 		       ", attach_type=BPF_TRACE_FSESSION_MULTI, flags=0"
 		       ", tracing_multi={ids=NULL, cookies=NULL, cnt=0}}"
 	},
+	{
+		.data = { .BPF_LINK_CREATE_data = {
+			.map_fd = -1,
+			.attach_type = BPF_STRUCT_OPS,
+		} },
+		.size = offsetofend(struct BPF_LINK_CREATE_struct,
+				    cgroup.expected_revision),
+		.str = "link_create={map_fd=-1, target_fd=0" FD0_PATH
+		       ", attach_type=BPF_STRUCT_OPS, flags=0"
+		       ", cgroup={relative_fd=0" FD0_PATH
+		       ", expected_revision=0}}",
+	},
+	{
+		.data = { .BPF_LINK_CREATE_data = {
+			.map_fd = -1,
+			.target_fd = -2,
+			.attach_type = BPF_STRUCT_OPS,
+			.flags = BPF_F_AFTER | BPF_F_LINK,
+			.cgroup = {
+				.relative_fd = -3,
+				.expected_revision = 0xfacefeedbadc0dedULL,
+			},
+		} },
+		.size = offsetofend(struct BPF_LINK_CREATE_struct,
+				    cgroup.expected_revision),
+		.str = "link_create={map_fd=-1, target_fd=-2"
+		       ", attach_type=BPF_STRUCT_OPS"
+		       ", flags=BPF_F_AFTER|BPF_F_LINK"
+		       ", cgroup={relative_fd=-3"
+		       ", expected_revision=0xfacefeedbadc0ded}}",
+	},
+	{
+		.data = { .BPF_LINK_CREATE_data = {
+			.map_fd = -1,
+			.target_fd = -2,
+			.attach_type = BPF_STRUCT_OPS,
+			.flags = BPF_F_BEFORE | BPF_F_ID | BPF_F_LINK,
+			.cgroup = {
+				.relative_id = 0xfeedbeef,
+				.expected_revision = 0xfacefeed,
+			},
+		} },
+		.size = offsetofend(struct BPF_LINK_CREATE_struct,
+				    cgroup.expected_revision),
+		.str = "link_create={map_fd=-1, target_fd=-2"
+		       ", attach_type=BPF_STRUCT_OPS"
+		       ", flags=BPF_F_BEFORE|BPF_F_ID|BPF_F_LINK"
+		       ", cgroup={relative_id=4276993775"
+		       ", expected_revision=0xfacefeed}}",
+	},
 };
 
 static const struct bpf_attr_check BPF_LINK_UPDATE_checks[] = {
@@ -2966,7 +3121,25 @@ static struct bpf_attr_check BPF_PROG_STREAM_READ_BY_FD_checks[] = {
 		.size = offsetofend(struct BPF_PROG_STREAM_READ_BY_FD_struct,
 				    prog_fd),
 		.str = "prog_stream_read={stream_buf=NULL, stream_buf_len=0"
-		       ", stream_id=0, prog_fd=-1}"
+		       ", stream_id=0 /* BPF_STREAM_??? */, prog_fd=-1}"
+	},
+	{
+		.data = { .BPF_PROG_STREAM_READ_BY_FD_data = {
+			.stream_id = BPF_STREAM_STDOUT,
+			.prog_fd = -1,
+		} },
+		.size = BPF_PROG_STREAM_READ_BY_FD_struct_size,
+		.str = "prog_stream_read={stream_buf=NULL, stream_buf_len=0"
+		       ", stream_id=BPF_STREAM_STDOUT, prog_fd=-1}",
+	},
+	{
+		.data = { .BPF_PROG_STREAM_READ_BY_FD_data = {
+			.stream_id = BPF_STREAM_STDERR,
+			.prog_fd = -1,
+		} },
+		.size = BPF_PROG_STREAM_READ_BY_FD_struct_size,
+		.str = "prog_stream_read={stream_buf=NULL, stream_buf_len=0"
+		       ", stream_id=BPF_STREAM_STDERR, prog_fd=-1}",
 	},
 	{
 		.data = { .BPF_PROG_STREAM_READ_BY_FD_data = {
@@ -2978,11 +3151,62 @@ static struct bpf_attr_check BPF_PROG_STREAM_READ_BY_FD_checks[] = {
 				    prog_fd),
 		.init_fn = init_BPF_PROG_STREAM_READ_BY_FD_attr,
 		.str = "prog_stream_read={stream_buf=\"bPf\\0daTum\""
-		       ", stream_buf_len=9, stream_id=3735928559"
+		       ", stream_buf_len=9"
+		       ", stream_id=0xdeadbeef /* BPF_STREAM_??? */"
 		       ", prog_fd=0" FD0_PATH "}"
 	}
 };
 
+
+static const struct bpf_attr_check BPF_PROG_STREAM_OPEN_checks[] = {
+	{
+		.data = { .BPF_PROG_STREAM_OPEN_data = { .prog_fd = -1 } },
+		.size = offsetofend(struct BPF_PROG_STREAM_OPEN_struct, prog_fd),
+		.str = "prog_stream_open={prog_fd=-1"
+		       ", stream_id=0 /* BPF_STREAM_??? */, flags=0}",
+	},
+	{
+		.data = { .BPF_PROG_STREAM_OPEN_data = {
+			.stream_id = BPF_STREAM_STDOUT,
+		} },
+		.size = offsetofend(struct BPF_PROG_STREAM_OPEN_struct, stream_id),
+		.str = "prog_stream_open={prog_fd=0" FD0_PATH
+		       ", stream_id=BPF_STREAM_STDOUT, flags=0}",
+	},
+	{
+		.data = { .BPF_PROG_STREAM_OPEN_data = {
+			.prog_fd = -1,
+			.stream_id = BPF_STREAM_STDERR,
+			.flags = BPF_F_STREAM_NONBLOCK,
+		} },
+		.size = BPF_PROG_STREAM_OPEN_struct_size,
+		.str = "prog_stream_open={prog_fd=-1"
+		       ", stream_id=BPF_STREAM_STDERR"
+		       ", flags=BPF_F_STREAM_NONBLOCK}",
+	},
+	{
+		.data = { .BPF_PROG_STREAM_OPEN_data = {
+			.prog_fd = -1,
+			.stream_id = 3,
+			.flags = 2,
+		} },
+		.size = BPF_PROG_STREAM_OPEN_struct_size,
+		.str = "prog_stream_open={prog_fd=-1"
+		       ", stream_id=0x3 /* BPF_STREAM_??? */"
+		       ", flags=0x2 /* BPF_F_STREAM_??? */}",
+	},
+	{
+		.data = { .BPF_PROG_STREAM_OPEN_data = {
+			.prog_fd = -1,
+			.stream_id = -1U,
+			.flags = -1U,
+		} },
+		.size = BPF_PROG_STREAM_OPEN_struct_size,
+		.str = "prog_stream_open={prog_fd=-1"
+		       ", stream_id=0xffffffff /* BPF_STREAM_??? */"
+		       ", flags=BPF_F_STREAM_NONBLOCK|0xfffffffe}",
+	},
+};
 
 #define CHK(cmd_) \
 	{ \
@@ -3033,6 +3257,7 @@ main(void)
 		CHK(BPF_TOKEN_CREATE),
 		CHK(BPF_PROG_STREAM_READ_BY_FD),
 		CHK(BPF_PROG_ASSOC_STRUCT_OPS),
+		CHK(BPF_PROG_STREAM_OPEN),
 	};
 
 	page_size = get_page_size();
@@ -3047,6 +3272,10 @@ main(void)
 
 	for (size_t i = 0; i < ARRAY_SIZE(checks); i++)
 		test_bpf(checks + i);
+
+	sys_bpf(BPF_PROG_STREAM_OPEN + 1, 0, sizeof_attr);
+	printf("bpf(0x28 /* BPF_??? */, NULL, %u) = %s\n",
+	       sizeof_attr, errstr);
 
 	sys_bpf(0xfacefeed, 0, (kernel_ulong_t) 0xfacefeedbadc0dedULL);
 	printf("bpf(0xfacefeed /* BPF_??? */, NULL, %u) = %s\n",

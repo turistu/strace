@@ -34,6 +34,10 @@
 #include "xlat/bpf_link_create_uprobe_multi_flags.h"
 #include "xlat/bpf_link_type.h"
 #include "xlat/bpf_perf_event_type.h"
+#include "xlat/bpf_stream_ids.h"
+#include "xlat/bpf_stream_open_flags.h"
+#include "xlat/ebpf_cond_pseudo_jmp.h"
+#include "xlat/ebpf_pseudo_exit.h"
 #include "xlat/ebpf_regs.h"
 #include "xlat/numa_node.h"
 
@@ -145,7 +149,16 @@ print_ebpf_insn(struct tcb * const tcp, void * const elem_buf,
 	printxval(ebpf_regs, insn->dst_reg, "BPF_REG_???");
 	tprint_struct_next();
 	tprints_field_name("src_reg");
-	printxval(ebpf_regs, insn->src_reg, "BPF_REG_???");
+	/*
+	 * Unwind selectors were introduced by Linux commit
+	 * v7.4-rc1~121^2~4^2~5.
+	 */
+	if (insn->code == (BPF_JMP | BPF_JCOND))
+		printxval(ebpf_cond_pseudo_jmp, insn->src_reg, "BPF_???");
+	else if (insn->code == (BPF_JMP | BPF_EXIT) && insn->src_reg)
+		printxval(ebpf_pseudo_exit, insn->src_reg, "BPF_???");
+	else
+		printxval(ebpf_regs, insn->src_reg, "BPF_REG_???");
 
 	tprint_struct_next();
 	PRINT_FIELD_D(*insn, off);
@@ -1292,10 +1305,19 @@ print_bpf_link_info_xdp(
 static void
 print_bpf_link_info_struct_ops(
 		const typeof_field(struct bpf_link_info_struct,
-				   struct_ops) *const p)
+				   struct_ops) *const p,
+		const unsigned int len)
 {
 	tprint_struct_begin();
 	PRINT_FIELD_U(*p, map_id);
+	/*
+	 * cgroup_id was introduced by Linux commit
+	 * v7.4-rc1~121^2~142^2~6.
+	 */
+	if (len > offsetof(struct bpf_link_info_struct, struct_ops.cgroup_id)) {
+		tprint_struct_next();
+		PRINT_FIELD_U(*p, cgroup_id);
+	}
 	tprint_struct_end();
 }
 
@@ -1573,7 +1595,7 @@ print_bpf_link_info(struct tcb * const tcp, uint32_t bpf_fd,
 	case BPF_LINK_TYPE_STRUCT_OPS:
 		tprint_struct_next();
 		PRINT_FIELD_OBJ_PTR(info, struct_ops,
-				    print_bpf_link_info_struct_ops);
+				    print_bpf_link_info_struct_ops, len);
 		break;
 	case BPF_LINK_TYPE_NETFILTER:
 		tprint_struct_next();
@@ -1765,6 +1787,12 @@ BEGIN_BPF_CMD_DECODER(BPF_PROG_QUERY)
 		tprint_struct_next();
 		PRINT_FIELD_FLAGS(attr, attach_flags, bpf_attach_flags,
 				  "BPF_F_???");
+
+		/* Introduced by Linux commit v7.4-rc1~121^2~142^2~6. */
+		if (len > offsetof(struct BPF_PROG_QUERY_struct, type_id)) {
+			tprint_struct_next();
+			PRINT_FIELD_U(attr, type_id);
+		}
 
 		tprint_struct_next();
 		tprints_field_name("prog_ids");
@@ -2130,7 +2158,10 @@ BEGIN_BPF_CMD_DECODER(BPF_LINK_CREATE)
 	tprint_struct_begin();
 	tprints_field_name("link_create");
 	tprint_struct_begin();
-	PRINT_FIELD_FD(attr, prog_fd, tcp);
+	if (attr.attach_type == BPF_STRUCT_OPS)
+		PRINT_FIELD_FD(attr, map_fd, tcp);
+	else
+		PRINT_FIELD_FD(attr, prog_fd, tcp);
 	tprint_struct_next();
 	/*
 	 * target_ifindex union member was added in Linux commit
@@ -2151,6 +2182,21 @@ BEGIN_BPF_CMD_DECODER(BPF_LINK_CREATE)
 
 	/* Trying to guess the union decoding based on the attach type */
 	switch (attr.attach_type) {
+	case BPF_STRUCT_OPS:
+		/* Introduced by Linux commit v7.4-rc1~121^2~142^2~6. */
+		tprint_struct_next();
+		tprints_field_name("cgroup");
+		tprint_struct_begin();
+		if (attr.flags & BPF_F_ID)
+			PRINT_FIELD_U(attr.cgroup, relative_id);
+		else
+			PRINT_FIELD_FD(attr.cgroup, relative_fd, tcp);
+		tprint_struct_next();
+		PRINT_FIELD_X(attr.cgroup, expected_revision);
+		tprint_struct_end();
+		attr_size = offsetofend(typeof(attr), cgroup.expected_revision);
+		break;
+
 	/* see include/linux/bpf-cgroup.h:to_cgroup_bpf_attach_type() */
 	case BPF_CGROUP_INET_INGRESS:
 	case BPF_CGROUP_INET_EGRESS:
@@ -2551,12 +2597,27 @@ BEGIN_BPF_CMD_DECODER(BPF_PROG_STREAM_READ_BY_FD)
 	tprint_struct_next();
 	PRINT_FIELD_U(attr, stream_buf_len);
 	tprint_struct_next();
-	PRINT_FIELD_U(attr, stream_id);
+	PRINT_FIELD_XVAL(attr, stream_id, bpf_stream_ids, "BPF_STREAM_???");
 	tprint_struct_next();
 	PRINT_FIELD_FD(attr, prog_fd, tcp);
 	tprint_struct_end();
 }
 END_BPF_CMD_DECODER(RVAL_DECODED)
+
+BEGIN_BPF_CMD_DECODER(BPF_PROG_STREAM_OPEN)
+{
+	/* Introduced by Linux commit v7.4-rc1~121^2~95^2~3. */
+	tprint_struct_begin();
+	tprints_field_name("prog_stream_open");
+	tprint_struct_begin();
+	PRINT_FIELD_FD(attr, prog_fd, tcp);
+	tprint_struct_next();
+	PRINT_FIELD_XVAL(attr, stream_id, bpf_stream_ids, "BPF_STREAM_???");
+	tprint_struct_next();
+	PRINT_FIELD_FLAGS(attr, flags, bpf_stream_open_flags, "BPF_F_STREAM_???");
+	tprint_struct_end();
+}
+END_BPF_CMD_DECODER(RVAL_DECODED | RVAL_FD)
 
 static void
 print_prog_assoc_struct_ops(struct tcb *const tcp,
@@ -2625,6 +2686,7 @@ SYS_FUNC(bpf)
 		BPF_CMD_ENTRY(BPF_TOKEN_CREATE),
 		BPF_CMD_ENTRY(BPF_PROG_STREAM_READ_BY_FD),
 		BPF_CMD_ENTRY(BPF_PROG_ASSOC_STRUCT_OPS),
+		BPF_CMD_ENTRY(BPF_PROG_STREAM_OPEN),
 	};
 
 	const unsigned int cmd = tcp->u_arg[0];
