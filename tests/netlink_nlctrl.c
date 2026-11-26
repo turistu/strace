@@ -438,6 +438,30 @@ test_nla_policy(const int fd)
 		    }
 		    printf("]");
 		   );
+
+	const struct {
+		struct nlattr outer;
+		struct nlattr inner;
+		struct nlattr attr;
+		unsigned char data[4];
+	} byte_order = {
+		.outer = { sizeof(byte_order), NLA_F_NESTED | 1 },
+		.inner = { sizeof(byte_order) - NLA_HDRLEN, NLA_F_NESTED | 2 },
+		.attr = { NLA_HDRLEN + 4, NL_POLICY_TYPE_ATTR_BYTE_ORDER },
+		.data = { 0xab, 0xcd, 0xef, 0 },
+	};
+
+	TEST_NLATTR(fd, nlh0, sizeof(struct genlmsghdr),
+		    init_genlmsghdr, print_genlmsghdr,
+		    NLA_F_NESTED|CTRL_ATTR_POLICY,
+		    sizeof(byte_order), &byte_order, sizeof(byte_order),
+		    printf("[{nla_len=%u, nla_type=NLA_F_NESTED|0x1}, "
+			   "[{nla_len=%u, nla_type=NLA_F_NESTED|0x2}, "
+			   "[{nla_len=%u, "
+			   "nla_type=NL_POLICY_TYPE_ATTR_BYTE_ORDER}, "
+			   "\"\\xab\\xcd\\xef\\x00\"]]]",
+			   byte_order.outer.nla_len, byte_order.inner.nla_len,
+			   byte_order.attr.nla_len));
 }
 
 static void
@@ -664,8 +688,8 @@ test_nla_ops_family(const int fd)
 
 	static const struct strval32 ethtool_cmds[] = {
 		{ ARG_STR(ETHTOOL_MSG_STRSET_GET) },
-		{ ARG_STR(ETHTOOL_MSG_MSE_GET) },
-		{ ETHTOOL_MSG_MSE_GET + 1, "ETHTOOL_MSG_???" },
+		{ ARG_STR(ETHTOOL_MSG_PORT_GET) },
+		{ ETHTOOL_MSG_PORT_GET + 1, "ETHTOOL_MSG_???" },
 	};
 	TEST_NLA_OPS_FAMILY(ETHTOOL_GENL_NAME, ethtool_cmds);
 
@@ -692,8 +716,8 @@ test_nla_ops_family(const int fd)
 
 	static const struct strval32 nl80211_cmds[] = {
 		{ ARG_STR(NL80211_CMD_GET_WIPHY) },
-		{ ARG_STR(NL80211_CMD_STOP_PD) },
-		{ NL80211_CMD_STOP_PD + 1, "NL80211_CMD_???" },
+		{ ARG_STR(NL80211_CMD_UPDATE_BEACON) },
+		{ NL80211_CMD_UPDATE_BEACON + 1, "NL80211_CMD_???" },
 	};
 	TEST_NLA_OPS_FAMILY(NL80211_GENL_NAME, nl80211_cmds);
 
