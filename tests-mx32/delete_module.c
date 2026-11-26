@@ -1,0 +1,1 @@
+../tests/delete_module.c

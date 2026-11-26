@@ -1,0 +1,1 @@
+../tests/prctl-sme-Xabbrev.c

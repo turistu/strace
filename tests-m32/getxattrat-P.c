@@ -1,0 +1,1 @@
+../tests/getxattrat-P.c

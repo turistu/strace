@@ -1,0 +1,1 @@
+../tests/legacy_poke_arg.sh
